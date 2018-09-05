@@ -5,7 +5,7 @@ See [Chapter 2. Cartesian Genetic Programming. Julian F. Miller.](https://www.sp
 
 ## Function graph visualization
 
-- <a href="art/FunctionGraph.png"><img src="art/FunctionGraph.png" height="150"></a>
+- <a href="art/FunctionGraph.bmp"><img src="art/FunctionGraph.bmp" height="150"></a>
 
 ## Generative art examples
 - <a href="art/Picture1.png"><img src="art/Picture1.png" height="150"></a>   
