@@ -1,9 +1,15 @@
 ﻿#load "XorshiftRng.fs"
 #load "Cgp.fs"
 #load "CgpRun.fs"
+#r @"..\packages\Microsoft.Msagl.1.1.1\lib\net40\Microsoft.Msagl.dll"
+#r @"..\packages\Microsoft.Msagl.Drawing.1.1.1\lib\net40\Microsoft.Msagl.Drawing.dll"
+#r @"..\packages\Microsoft.Msagl.GraphViewerGDI.1.1.1\lib\net40\Microsoft.Msagl.GraphViewerGdi.dll"
+#load "GgpGraph.fs"
+
 open FsCgp
 open FsCgp.CgpBase
 open FsCgp.CgpRun
+open FsCgp.CgpGraph
 
 let rng = new XorshiftRng.XorshiftPRNG()
 
@@ -61,11 +67,26 @@ let test_cases =
 let loss (y':float[]) (y:float[]) = (y'.[0] - y.[0]) ** 2.0 //square loss y' is output from the genome evaluation and y is actual output 
 
 let cspec = compile spec
+
 let evaluator = defaultEvaluator cspec loss test_cases
+//let evaluator = defaultEvaluatorPar cspec loss test_cases
 
-let termination gen loss = List.head loss = 0.0 || gen > 10000000
+let termination gen loss = List.head loss < 0.0000001 || gen > 10000000
 
-let indv = run1PlusLambda spec 4 rng evaluator termination
+let currentBest = ref Unchecked.defaultof<_>
+
+let runAsync() =
+  async {
+    do run1PlusLambda Verbose spec 4 rng evaluator termination currentBest
+  }
+  |> Async.Start
+
+let showBest() = callGraph cspec currentBest.Value.Genome |> visualize
   
-printGenome cspec indv.Genome
+(*
+runAsync()  //run this to find the best genome
+
+showBest()  //run this periodically to view the graph of the current best genome
+
+*)
 
