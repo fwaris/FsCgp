@@ -50,15 +50,29 @@ module CgpRun =
       |> Array.sum
     if System.Double.IsNaN fit then System.Double.MaxValue else fit
 
+ 
+  //let cached evaluator genome =
+    
+
+
+
   ///run a single generation
   let runGen cspec rng parent popSz (evaluator:Evaluator<_>) =
-    let pop = genPop cspec rng popSz
+    let pop = genPop cspec rng 1 //exploratory genomes
     pop |> Array.iter (fun i -> i.Loss<-evaluator i.Genome)
     let bestPop = pop |> Array.minBy (fun i->i.Loss)
-    let child = copyIndv parent
-    mutate cspec rng child.Genome
-    child.Loss <- evaluator child.Genome
-    let parent' = if parent.Loss < child.Loss then parent else child
+    let children = 
+      [for i in 1 .. popSz do 
+        let child = copyIndv parent
+        mutate cspec rng child.Genome
+        child.Loss <- evaluator child.Genome
+        yield child
+      ]
+    let bestChild = children |> List.minBy (fun i -> i.Loss)
+    //let child = copyIndv parent
+    //mutate cspec rng child.Genome
+    //child.Loss <- evaluator child.Genome
+    let parent' = if parent.Loss < bestChild.Loss then parent else bestChild
     let parent' = 
       if parent'.Loss < bestPop.Loss then 
         parent' 
@@ -82,7 +96,7 @@ module CgpRun =
       else
         let parent' = runGen cspec rng parent lambda evaluator
         if parent'.Loss < parent.Loss then
-          match verbosity with Verbose -> printfn "new best %f" parent'.Loss | _ -> ()
+          match verbosity with Verbose -> printfn "new best %.10f" parent'.Loss | _ -> ()
           currentBest := parent'
         loop (i+1) ((parent'.Loss::hist) |> List.truncate 5) parent'
 

@@ -133,7 +133,7 @@ module CgpBase =
       else                                              //C: nodeId is for a function gene
         let gOffst = genomeOffset cspec nodeId
         //printfn "gOffst %d" gOffst
-        let f = cspec.Spec.FunctionTable.[genome.G.[gOffst]]                  //lookup function in function table
+        let f = cspec.FtbleWithConst.[genome.G.[gOffst]]                  //lookup function in function table
         isVisited.[nodeId] <- true                                            //node visited
         functionOutputs.[nodeId] <- [(out,i)]                                 //save location to where the output of this func. will go
         if isConstant cspec  genome.G.[gOffst] then
@@ -193,7 +193,7 @@ module CgpBase =
             hasVals.[valOffset] <- true
             v
           else
-            let f = cspec.Spec.FunctionTable.[funcId]
+            let f = cspec.FtbleWithConst.[funcId]
             let inps = [|for inp in genome.G.[gOffst + 1 .. gOffst+f.Arity] -> evalNode inp|] 
             let v = f.F inps
             vals.[valOffset] <- v
@@ -207,7 +207,7 @@ module CgpBase =
         let n = rng.Next(cspec.RefSize)                                 //point to random upstream node
         genome.G.[idx] <- n
       elif isFunction cspec idx then                                    //function node
-        let n = rng.Next(cspec.Spec.FunctionTable.Length)               
+        let n = rng.Next(cspec.FtbleWithConst.Length)               
         genome.G.[idx] <- n
         if isConstant cspec n then                                      //if 'constant' function was chosen
           let c = rng.Next(genome.Constants.Length)                     //set parameter to valid constant
@@ -265,7 +265,7 @@ module CgpBase =
         if isConstant cspec funcId then
           ()
         else
-          let f = cspec.Spec.FunctionTable.[funcId]
+          let f = cspec.FtbleWithConst.[funcId]
           for inp in genome.G.[gOffst + 1 .. gOffst+f.Arity] do 
             markNode inp
     for i in cspec.OutputOffset  .. genome.G.Length-1 do 
@@ -276,9 +276,6 @@ module CgpBase =
   and Node<'a> = Const of 'a | Fun of Call<'a> | Input of int | Out of int * Node<'a>
 
   let callGraph<'a> (cspec:SpecCache<'a>) (genome:Genome<'a>) =
-    let sb = StringBuilder()
-    let (!>) s = sb.Append(s:string) |> ignore
-    let ln() = sb.AppendLine() |> ignore
     let genes = activeGenes cspec genome
     let nodes = genes |> Array.mapi (fun i g -> i,g) |> Array.filter snd
     let nodes = 
@@ -344,3 +341,15 @@ module CgpBase =
       | _ -> ()
       ln())
     sb.ToString()
+
+  let dumpGenome genome =
+    printfn "{"
+    printfn "  G = "
+    printfn "     [|"
+    genome.G |> Seq.iter (fun v -> printfn "       %d"  v)
+    printfn "     |]"
+    printfn "  Constants = "
+    printfn "     [|"
+    genome.Constants |> Seq.iter (fun v -> printfn "       %A" v)
+    printfn "     |]"
+    printfn "}"

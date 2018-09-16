@@ -46,8 +46,8 @@
     <Content Include="packages.config" />
     <Compile Include="XorshiftRng.fs" />
     <Compile Include="Cgp.fs" />
-    <Compile Include="CgpRun.fs" />
     <Compile Include="GgpGraph.fs" />
+    <Compile Include="CgpRun.fs" />
     <Compile Include="Pgm.fs" />
     <None Include="BaseTest.fsx" />
     <None Include="CgpArt.fsx" />

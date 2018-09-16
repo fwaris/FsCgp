@@ -34,11 +34,11 @@ let cnst =
     ConstGen = fun() -> 
       let sign = if rng.NextDouble() > 0.5 then 1.0 else -1.0
       let v = rng.NextDouble() * 100.0
-      v * sign
+      v * sign //|> int |> float
     Evolve = fun i -> 
       let sign = if rng.NextDouble() > 0.5 then 1.0 else -1.0
       let v = rng.NextDouble()
-      i + (sign * v)
+      i + (sign * v) //|> int |> float
   }
 
 let spec = 
@@ -71,7 +71,7 @@ let cspec = compile spec
 let evaluator = defaultEvaluator cspec loss test_cases
 //let evaluator = defaultEvaluatorPar cspec loss test_cases
 
-let termination gen loss = List.head loss < 0.0000001 || gen > 10000000
+let termination gen loss = List.head loss < 0.000000001
 
 let currentBest = ref Unchecked.defaultof<_>
 
