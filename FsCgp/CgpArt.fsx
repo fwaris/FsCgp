@@ -65,10 +65,11 @@ let s =
     NumInputs = 2
     NumNodes = 5
     NumOutputs = 3
-    BackLevel = 2+5
+    BackLevel = None
     FunctionTable = ft
     MutationRate = 0.20
     Constants = None//Some cnst
+    UseCache = false
   }
 
 let cs = compile s

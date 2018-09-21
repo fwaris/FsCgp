@@ -1,4 +1,5 @@
-﻿#load "XorshiftRng.fs"
+﻿#r "System.Runtime.Caching"
+#load "XorshiftRng.fs"
 #load "Cgp.fs"
 #load "CgpRun.fs"
 #r @"..\packages\Microsoft.Msagl.1.1.1\lib\net40\Microsoft.Msagl.dll"
@@ -46,10 +47,11 @@ let spec =
     NumInputs = 1
     NumNodes = 30
     NumOutputs = 1
-    BackLevel = 1+30
+    BackLevel = None
     FunctionTable = ft
     MutationRate = 0.20
     Constants = Some cnst
+    UseCache = true
   }
 
 let test_cases =
@@ -71,13 +73,13 @@ let cspec = compile spec
 let evaluator = defaultEvaluator cspec loss test_cases
 //let evaluator = defaultEvaluatorPar cspec loss test_cases
 
-let termination gen loss = List.head loss < 0.000000001
+let termination gen loss = List.head loss < 0.001 || gen > 10000000
 
 let currentBest = ref Unchecked.defaultof<_>
 
 let runAsync() =
   async {
-    do run1PlusLambda Verbose spec 4 rng evaluator termination currentBest
+    do run1PlusLambda Verbose cspec 4 rng evaluator termination (fun indv -> currentBest := indv) None
   }
   |> Async.Start
 
@@ -87,6 +89,7 @@ let showBest() = callGraph cspec currentBest.Value.Genome |> visualize
 runAsync()  //run this to find the best genome
 
 showBest()  //run this periodically to view the graph of the current best genome
+
 
 *)
 

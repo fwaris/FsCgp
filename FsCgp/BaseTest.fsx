@@ -33,10 +33,11 @@ let s =
     NumInputs = 4
     NumOutputs = 4
     NumNodes  = 10
-    BackLevel = 4+10
+    BackLevel = None
     FunctionTable = ft
     MutationRate = 0.10
     Constants = Some cnst
+    UseCache = false
   }
 
 let cspec = compile s

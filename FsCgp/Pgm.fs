@@ -7,6 +7,7 @@ System.Console.WriteLine ("debugging console.")
 open FsCgp
 open FsCgp.CgpBase
 open FsCgp.CgpRun
+open FsCgp.CgpGraph
 
 let rng = new XorshiftRng.XorshiftPRNG()
 
@@ -31,11 +32,11 @@ let cnst =
     ConstGen = fun() -> 
       let sign = if rng.NextDouble() > 0.5 then 1.0 else -1.0
       let v = rng.NextDouble() * 100.0
-      v * sign
+      v * sign //|> int |> float
     Evolve = fun i -> 
       let sign = if rng.NextDouble() > 0.5 then 1.0 else -1.0
       let v = rng.NextDouble()
-      i + (sign * v)
+      i + (sign * v) //|> int |> float
   }
 
 let spec = 
@@ -43,30 +44,43 @@ let spec =
     NumInputs = 1
     NumNodes = 30
     NumOutputs = 1
-    BackLevel = 1+30
+    BackLevel = None
     FunctionTable = ft
     MutationRate = 0.20
     Constants = Some cnst
+    UseCache = true
   }
+
+let test_cases =
+  [|
+        (0., 10.)
+        (0.5, 9.125)
+        (1., 9.)
+        (10., 990.)
+        (-5., -105.)
+        (17., 4889.)
+        (3.14, 34.679144)
+  |]
+  |> Array.map (fun (inp,out)-> [|inp|],[|out|])
+
+let loss (y':float[]) (y:float[]) = (y'.[0] - y.[0]) ** 2.0 //square loss y' is output from the genome evaluation and y is actual output 
 
 let cspec = compile spec
 
+let evaluator = defaultEvaluator cspec loss test_cases
+//let evaluator = defaultEvaluatorPar cspec loss test_cases
 
-let genome =
-      {G = [|4; 0; 0; 4; 0; 1; 5; 2; 1; 4; 2; 2; 0; 0; 4; 0; 0; 1; 2; 0; 6; 0; 0; 4;
-        2; 7; 3; 2; 1; 8; 3; 5; 8; 2; 5; 6; 5; 12; 8; 2; 10; 13; 2; 5; 2; 1; 5;
-        13; 5; 4; 15; 2; 16; 16; 2; 15; 18; 3; 9; 13; 3; 19; 20; 0; 0; 12; 3;
-        9; 5; 3; 18; 9; 0; 0; 12; 4; 0; 10; 2; 21; 18; 2; 14; 8; 3; 27; 11; 0;
-        0; 20; 29|];
-     Constants = [|5.000000841|];};
+let termination gen loss = List.head loss < 0.001 || gen > 100000
 
+let currentBest = ref Unchecked.defaultof<_>
 
-     
-//printGenome cspec genome
+let runAsync() =
+  async {
+    do run1PlusLambda Verbose cspec 4 rng evaluator termination (fun indv -> currentBest := indv) None
+  }
+  |> Async.Start
 
-let cd = callGraph cspec genome
-FsCgp.CgpGraph.visualize cd
-
+runAsync()
 
 //System.Console.WriteLine s
 

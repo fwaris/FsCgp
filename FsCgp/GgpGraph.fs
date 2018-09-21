@@ -15,6 +15,7 @@ module CgpGraph =
       match v with
       | Fun c -> () 
       | Input i  -> n.Attr.Shape <- Microsoft.Msagl.Drawing.Shape.Ellipse
+                    n.Attr.FillColor <- Microsoft.Msagl.Drawing.Color.LightSeaGreen
       | Out (i,r) -> n.Attr.Shape <- Microsoft.Msagl.Drawing.Shape.Ellipse
                      n.Attr.FillColor <- Microsoft.Msagl.Drawing.Color.LavenderBlush
                      n.Attr.LineWidth <- 2.0

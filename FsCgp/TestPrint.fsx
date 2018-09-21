@@ -44,10 +44,11 @@ let spec =
     NumInputs = 1
     NumNodes = 30
     NumOutputs = 1
-    BackLevel = 1+30
+    BackLevel = None
     FunctionTable = ft
     MutationRate = 0.20
     Constants = Some cnst
+    UseCache = false
   }
 
 let genome =

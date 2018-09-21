@@ -28,10 +28,11 @@ type Spec<'a> =
     NumInputs     : int              //size of input vector
     NumOutputs    : int              //size of output vector
     NumNodes      : int              //number function nodes
-    BackLevel     : int              //how many levels can go back for node input
+    BackLevel     : int option       //how many levels can go back for node input or None for default of all
     FunctionTable : Func<'a>[]       //function table
     MutationRate  : float                   //the %age of genes to mutate
     Constants     : ConstSpec<'a> option    //number of constants
+    UseCache      : bool 
 }
 
 ///cached specification created by the 'compile' function (not to be directly created by user)
@@ -48,6 +49,7 @@ type SpecCache<'a> =
     FtbleWithConst : Func<'a>[]
     NumCnsts       : int
     FConstIdx      : int
+    EffBkLvl       : int
   }
 
 module CgpBase =
@@ -68,7 +70,9 @@ module CgpBase =
     if List.exists (fun x->x<=0) intNodes then failwith "integer values in spec must be positive"
     if spec.MutationRate < 0.0 then failwith "mutation rate is negative"
     if spec.FunctionTable.Length = 0 then failwith "empty function table"
-    if spec.BackLevel > spec.NumInputs + spec.NumNodes then failwith "backlevel should not exceed input + nodes"
+    let maxBackLevel =  spec.NumInputs + spec.NumNodes
+    let backLevel = spec.BackLevel |> Option.defaultValue maxBackLevel
+    let backLevel = min backLevel maxBackLevel //cap to max back
     let maxArity = ft |> Array.map(fun x->x.Arity) |> Array.max
     let nodeLen = 1 (*function gene*) + maxArity (*connection genes*)
     let genomeSize = (nodeLen * spec.NumNodes) + spec.NumOutputs
@@ -85,6 +89,7 @@ module CgpBase =
       FtbleWithConst=ft
       NumCnsts      = numConsts
       FConstIdx     = 0
+      EffBkLvl     = backLevel
     }
   
   //utility functions
@@ -220,7 +225,7 @@ module CgpBase =
           let c2 = cspec.Spec.Constants.Value.Evolve genome.Constants.[cRef]   //evovle constant
           genome.Constants.[cRef]<-c2
         else
-          let minRange = max (nodeId - 1 - cspec.Spec.BackLevel) 0            //regular connection 
+          let minRange = max (nodeId - 1 - cspec.EffBkLvl) 0            //regular connection 
           let maxRange = nodeId
           let n = rng.Next(minRange,maxRange) 
           genome.G.[idx] <- n                                                 //set to random node
@@ -241,7 +246,7 @@ module CgpBase =
     {G=Array.zeroCreate cspec.GenomeSize; Constants=cnsts}
 
   ///return a new randomized genome that honors the allele constraints
-  let randomGenome cspec rng = 
+  let randomGenome<'a> (cspec:SpecCache<'a>) rng = 
     let g = createGenome cspec
     for i in 0..cspec.GenomeSize-1 do
       mutateAt cspec rng  g i
@@ -342,14 +347,20 @@ module CgpBase =
       ln())
     sb.ToString()
 
-  let dumpGenome genome =
-    printfn "{"
-    printfn "  G = "
-    printfn "     [|"
-    genome.G |> Seq.iter (fun v -> printfn "       %d"  v)
-    printfn "     |]"
-    printfn "  Constants = "
-    printfn "     [|"
-    genome.Constants |> Seq.iter (fun v -> printfn "       %A" v)
-    printfn "     |]"
-    printfn "}"
+  let dumpGenomeI genome indent =
+    let ids = new System.String([|for _ in 1 .. indent -> ' '|])
+    let (!) s = printf "%s" ids; printfn "%s" s
+    ! "{"
+    ! "  G = "
+    ! "     [|"
+    genome.G 
+                |> Seq.chunkBySize 50 
+                |> Seq.iter (fun c -> ! (sprintf "       %s"  (System.String.Join(";",c))))
+    ! "     |]"
+    ! "  Constants = "
+    ! "     [|"
+    genome.Constants |> Seq.iter (fun v -> ! (sprintf "       %A" v))
+    ! "     |]"
+    ! "}"
+    
+  let dumpGenome genome = dumpGenomeI genome 0
