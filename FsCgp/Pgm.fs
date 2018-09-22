@@ -26,19 +26,6 @@ let funcs =
 
 let ft = funcs |> Array.map (fun (f,a,d) -> {F=f;Arity=a;Desc=d})
 
-let cnst = 
-  {
-    NumConstants = 1
-    ConstGen = fun() -> 
-      let sign = if rng.NextDouble() > 0.5 then 1.0 else -1.0
-      let v = rng.NextDouble() * 100.0
-      v * sign //|> int |> float
-    Evolve = fun i -> 
-      let sign = if rng.NextDouble() > 0.5 then 1.0 else -1.0
-      let v = rng.NextDouble()
-      i + (sign * v) //|> int |> float
-  }
-
 let spec = 
   {
     NumInputs = 1
@@ -47,8 +34,8 @@ let spec =
     BackLevel = None
     FunctionTable = ft
     MutationRate = 0.20
-    Constants = Some cnst
-    UseCache = true
+    Constants = floatConsts rng 1 100.0 |> Some
+    CacheWith = Some floatCache
   }
 
 let test_cases =
@@ -70,7 +57,7 @@ let cspec = compile spec
 let evaluator = defaultEvaluator cspec loss test_cases
 //let evaluator = defaultEvaluatorPar cspec loss test_cases
 
-let termination gen loss = List.head loss < 0.001 || gen > 100000
+let termination gen loss = List.head loss < 0.001 //|| gen > 100000
 
 let currentBest = ref Unchecked.defaultof<_>
 

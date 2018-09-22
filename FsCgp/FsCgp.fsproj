@@ -52,6 +52,7 @@
     <None Include="CgpArt.fsx" />
     <None Include="Polynomial.fsx" />
     <None Include="TestPrint.fsx" />
+    <None Include="DebugCache.fsx" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="FSharp.Core">

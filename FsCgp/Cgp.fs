@@ -27,13 +27,15 @@ type Spec<'a> =
   {
     NumInputs     : int              //size of input vector
     NumOutputs    : int              //size of output vector
-    NumNodes      : int              //number function nodes
-    BackLevel     : int option       //how many levels can go back for node input or None for default of all
+    NumNodes      : int              //number of function nodes
+    BackLevel     : int option       //max levels to go back for a connection gene. None for default of all
     FunctionTable : Func<'a>[]       //function table
     MutationRate  : float                   //the %age of genes to mutate
     Constants     : ConstSpec<'a> option    //number of constants
-    UseCache      : bool 
-}
+    CacheWith     : ('a->string) option     //if a function is supplied to convert 'a to string, caching is used
+                                            //this function is needed to store constant values (of type 'a) 
+                                            //as part of the cache key string
+  }
 
 ///cached specification created by the 'compile' function (not to be directly created by user)
 type SpecCache<'a> =
@@ -56,7 +58,7 @@ module CgpBase =
   open XorshiftRng
   open System.Text
 
-  ///check settings and cache some values to avoid needless computation
+  ///check settings and cache some values to avoid needless re-computation
   let compile spec = 
 
     let ft = 
@@ -230,7 +232,7 @@ module CgpBase =
           let n = rng.Next(minRange,maxRange) 
           genome.G.[idx] <- n                                                 //set to random node
 
-  //perform a point mutation at a random location
+  ///perform a point mutation at a random location
   let mutate1 cspec (rng:XorshiftPRNG) genome =
       let idx = rng.Next(cspec.GenomeSize)
       mutateAt cspec rng genome idx
@@ -245,7 +247,7 @@ module CgpBase =
     let cnsts = if cspec.NumCnsts = 0 then [||] else [|for i in 1..cspec.NumCnsts -> cspec.Spec.Constants.Value.ConstGen()|]
     {G=Array.zeroCreate cspec.GenomeSize; Constants=cnsts}
 
-  ///return a new randomized genome that honors the allele constraints
+  ///return a new randomized genome that honors allele constraints
   let randomGenome<'a> (cspec:SpecCache<'a>) rng = 
     let g = createGenome cspec
     for i in 0..cspec.GenomeSize-1 do
@@ -254,6 +256,34 @@ module CgpBase =
 
   let copyGenome g = {g with G=Array.copy g.G; Constants=Array.copy g.Constants}
 
+  ///marks all active nodes, associated connection genes and output genes
+  let genomeMask cspec genome =
+    let mask = Array.create cspec.GenomeSize false
+
+    let rec markNode nodeId = 
+      //printfn "eval nodeId %d" nodeId
+      if isInput cspec nodeId then 
+        ()
+      else
+        let gOffst = genomeOffset cspec nodeId
+        mask.[gOffst] <- true
+        //printfn "gOffst %d" gOffst
+        let funcId = genome.G.[gOffst]
+        let f = cspec.FtbleWithConst.[funcId]        
+        for inp in gOffst + 1 .. gOffst+f.Arity do 
+          mask.[inp] <- true //mark connection genes
+        if isConstant cspec funcId then
+          () // don't recurse
+        else
+          for inp in genome.G.[gOffst + 1 .. gOffst+f.Arity] do 
+            markNode inp
+          
+    for i in cspec.OutputOffset  .. genome.G.Length-1 do 
+      mask.[i] <- true
+      markNode genome.G.[i]
+    mask
+
+  ///marks all active  nodes
   let activeGenes cspec genome =
     let genes = Array.zeroCreate cspec.Spec.NumNodes
 
@@ -280,6 +310,7 @@ module CgpBase =
   type Call<'a> = {Id:int; Func:Func<'a>; mutable Refs:Node<'a> []}
   and Node<'a> = Const of 'a | Fun of Call<'a> | Input of int | Out of int * Node<'a>
 
+  ///generates the call graph of the genome 
   let callGraph<'a> (cspec:SpecCache<'a>) (genome:Genome<'a>) =
     let genes = activeGenes cspec genome
     let nodes = genes |> Array.mapi (fun i g -> i,g) |> Array.filter snd
@@ -326,6 +357,9 @@ module CgpBase =
       |]
     Array.append calls outs
    
+  /// prints the genome as pseudo F# code 
+  /// uses function table descriptions as the functions used
+  /// in printed code
   let printGenome<'a> (cspec:SpecCache<'a>) (genome:Genome<'a>) =
     let cg = callGraph cspec genome
     let sb = StringBuilder()
@@ -347,6 +381,7 @@ module CgpBase =
       ln())
     sb.ToString()
 
+  ///helper for genome printing
   let dumpGenomeI genome indent =
     let ids = new System.String([|for _ in 1 .. indent -> ' '|])
     let (!) s = printf "%s" ids; printfn "%s" s
@@ -363,4 +398,7 @@ module CgpBase =
     ! "     |]"
     ! "}"
     
+  ///prints genome as valid code snippet (for float and int types) 
+  ///to reconstruct genome in code
+  ///useful for persisting and later re-using the genome
   let dumpGenome genome = dumpGenomeI genome 0

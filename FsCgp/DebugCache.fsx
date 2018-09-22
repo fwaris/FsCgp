@@ -29,6 +29,19 @@ let funcs =
 
 let ft = funcs |> Array.map (fun (f,a,d) -> {F=f;Arity=a;Desc=d})
 
+let cnst = 
+  {
+    NumConstants = 1
+    ConstGen = fun() -> 
+      let sign = if rng.NextDouble() > 0.5 then 1.0 else -1.0
+      let v = rng.NextDouble() * 100.0
+      v * sign //|> int |> float
+    Evolve = fun i -> 
+      let sign = if rng.NextDouble() > 0.5 then 1.0 else -1.0
+      let v = rng.NextDouble()
+      i + (sign * v) //|> int |> float
+  }
+
 let spec = 
   {
     NumInputs = 1
@@ -41,7 +54,6 @@ let spec =
     CacheWith = Some floatCache
   }
 
-//points fitting f(x) = x³ - 2x + 10.
 let test_cases =
   [|
         (0., 10.)
@@ -61,7 +73,7 @@ let cspec = compile spec
 let evaluator = defaultEvaluator cspec loss test_cases
 //let evaluator = defaultEvaluatorPar cspec loss test_cases
 
-let termination gen loss = List.head loss < 0.001 //|| gen > 100000
+let termination gen loss = List.head loss < 0.001 || gen > 10000000
 
 let currentBest = ref Unchecked.defaultof<_>
 
@@ -78,5 +90,47 @@ runAsync()  //run this to find the best genome
 
 showBest()  //run this periodically to view the graph of the current best genome
 
+
 *)
 
+let gC = 
+  {
+    G =
+       [|
+         5;0;0;0;0;1;1;1;2;5;0;3;5;1;1;1;4;0;1;1;1;1;6;5;3;0;5;0;0;0;1;3;8;3;0;8;0;0;0;0;0;0;4;14;0;6;4;13;4;6
+       //1     2     3     4
+         8;1;0;5;3;6;5;3;18;17;0;0;3;5;9;18;6;11;1;2;11;10;0;0;0;4;22;1;3;13;25;2;12;1;5;8;11;6;0;2;4
+       |]
+    Constants =
+       [|
+         92.92507805
+       |]
+  }
+
+let gI = 
+  {
+    G =
+       [|
+         5;0;0;0;0;1;1;1;2;5;1;3;5;1;1;1;4;0;4;1;1;1;6;2;3;0;5;0;0;0;1;3;9;3;0;8;0;0;0;0;0;0;4;14;0;6;4;13;4;6
+      // 1     2     3     4
+         8;1;0;5;3;6;4;3;18;17;0;0;3;5;9;19;6;11;1;2;11;10;0;0;0;4;22;1;3;13;25;2;12;1;5;8;11;6;0;2;4
+       |]
+    Constants =
+       [|
+         92.92507805
+       |]
+  }
+
+(*
+callGraph cspec gC |> visualize
+callGraph cspec gI |> visualize
+printGenome cspec gC
+printGenome cspec gI
+*)
+let kC = genKey cspec gC
+let kI = genKey cspec gI
+kC = kI
+
+let mC = genomeMask cspec gC
+let mI = genomeMask cspec gI
+mC = mI

@@ -7,6 +7,9 @@ See [Chapter 2. Cartesian Genetic Programming. Julian F. Miller.](https://www.sp
 
 - <a href="art/FunctionGraph.bmp"><img src="art/FunctionGraph.bmp" height="150"></a>
 
+## GP Examples
+- Symbolic Regression: [Polynomial.fsx](FsCgp/Polynomial.fsx)
+
 ## Generative art examples
 - <a href="art/Picture1.png"><img src="art/Picture1.png" height="150"></a>   
 
