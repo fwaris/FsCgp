@@ -37,7 +37,7 @@ let s =
     FunctionTable = ft
     MutationRate = 0.10
     Constants = Some cnst
-    UseCache = false
+    CacheWith = None
   }
 
 let cspec = compile s

@@ -69,7 +69,7 @@ let s =
     FunctionTable = ft
     MutationRate = 0.20
     Constants = None//Some cnst
-    UseCache = false
+    CacheWith = None
   }
 
 let cs = compile s

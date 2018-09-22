@@ -48,7 +48,7 @@ let spec =
     FunctionTable = ft
     MutationRate = 0.20
     Constants = Some cnst
-    UseCache = false
+    CacheWith = None
   }
 
 let genome =
