@@ -169,11 +169,11 @@ module CgpRun =
   let inline run1PlusLambda 
     verbosity 
     cspec
-    lambda
+    lambda                   //number of offspring
     (rng:XorshiftPRNG) 
-    evaluator
+    evaluator                //function to evaluate a genome's loss or fitness
     (terminator:Terminator) 
-    pubishIndv
+    pubishIndv               //function to post new best indvidual (this function should return immediately otherwise the evolutionary process will be slow)
     startIndv
     =
     let parent = startIndv |> Option.defaultValue {Genome=randomGenome cspec rng; Loss=System.Double.MaxValue}
