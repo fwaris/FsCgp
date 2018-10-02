@@ -22,7 +22,7 @@ module CgpGraph =
       | Const (v) -> n.Attr.FillColor <- Microsoft.Msagl.Drawing.Color.LightGray
 
 
-  let makeGraph<'a> (callGraph:Node<'a> array) =
+  let makeGraph<'a> (callGraph:Node<'a> array) (inputLabels:string[]) =
     let g = new Microsoft.Msagl.Drawing.Graph()
 
     //nodes
@@ -35,8 +35,13 @@ module CgpGraph =
       )
 
     let drawingNodes = allNodes |> Seq.map (fun cn ->
-      let n = g.AddNode(nodeId cn)
-      n.UserData<-cn
+      let n = 
+        match cn with
+        | Input i -> 
+                      let t = if inputLabels.Length > i then inputLabels.[i] else nodeId cn
+                      new Microsoft.Msagl.Drawing.Node(nodeId cn, UserData=cn,  LabelText=t)
+        | _ ->        new Microsoft.Msagl.Drawing.Node(nodeId cn, UserData=cn)
+      g.AddNode(n)
       n)
 
     drawingNodes |> Seq.iter styleNode<'a>
@@ -50,9 +55,9 @@ module CgpGraph =
     g
 
   ///visualize a graph given vertices, edges and subgraphs
-  let visualize graph =
+  let visualizeWithLabels graph inputLabels = 
     let gv = new Microsoft.Msagl.GraphViewerGdi.GViewer()
-    let g =  makeGraph graph
+    let g =  makeGraph graph inputLabels
     g.Edges |> Seq.iter (fun e->  if e.Label<> null then e.Label.FontSize <- 8.0)
     gv.Graph <- g
     let f = new System.Windows.Forms.Form()
@@ -63,3 +68,5 @@ module CgpGraph =
     gv.Update()
     f.ResumeLayout()
     f.Show()
+
+  let visualize graph = visualizeWithLabels graph [||]
