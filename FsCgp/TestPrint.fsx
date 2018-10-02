@@ -68,7 +68,7 @@ let cg = callGraph cspec genome
 
 visualize cg
 
-visualizeWithLabels cg [|"Input Label"|]
+visualizeWithLabels [|"Input Label"|] cg 
 
 
 

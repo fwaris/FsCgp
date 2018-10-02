@@ -55,7 +55,7 @@ module CgpGraph =
     g
 
   ///visualize a graph given vertices, edges and subgraphs
-  let visualizeWithLabels graph inputLabels = 
+  let visualizeWithLabels inputLabels graph  = 
     let gv = new Microsoft.Msagl.GraphViewerGdi.GViewer()
     let g =  makeGraph graph inputLabels
     g.Edges |> Seq.iter (fun e->  if e.Label<> null then e.Label.FontSize <- 8.0)
@@ -69,4 +69,4 @@ module CgpGraph =
     f.ResumeLayout()
     f.Show()
 
-  let visualize graph = visualizeWithLabels graph [||]
+  let visualize graph = visualizeWithLabels [||] graph 
