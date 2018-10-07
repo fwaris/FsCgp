@@ -1,15 +1,9 @@
-﻿#r @"..\packages\Microsoft.Msagl.1.1.1\lib\net40\Microsoft.Msagl.dll"
-#r @"..\packages\Microsoft.Msagl.Drawing.1.1.1\lib\net40\Microsoft.Msagl.Drawing.dll"
-#r @"..\packages\Microsoft.Msagl.GraphViewerGDI.1.1.1\lib\net40\Microsoft.Msagl.GraphViewerGdi.dll"
+﻿#load "SetEnv.fsx"
 
-#load "XorshiftRng.fs"
-#load "Cgp.fs"
-#load "GgpGraph.fs"
+open FsCgp.CgpGraph
 open FsCgp
 open FsCgp.CgpBase
-open FsCgp.CgpGraph
 
-let rng = new XorshiftRng.XorshiftPRNG()
 
 let pi_255 = (System.Math.PI) / 255.0
 let tpi_255 = 2.0 * (System.Math.PI) / 255.0
@@ -46,19 +40,6 @@ let funcs =
 
 let ft = funcs |> Array.map (fun (f,d) -> {F=f;Arity=2;Desc=d})
 
-let cnst = 
-  {
-    NumConstants = 1
-    ConstGen = fun() -> 
-      let sign = if rng.NextDouble() > 0.5 then 1.0 else -1.0
-      let v = rng.NextDouble() * 10.0
-      v * sign
-    Evolve = fun i -> 
-      let sign = if rng.NextDouble() > 0.5 then 1.0 else -1.0
-      let v = rng.NextDouble()
-      i + (sign * v)
-  }
-
 
 let s = 
   {
@@ -68,8 +49,7 @@ let s =
     BackLevel = None
     FunctionTable = ft
     MutationRate = 0.20
-    Constants = None//Some cnst
-    CacheWith = None
+    Constants = floatConsts 1 100. |> Some
   }
 
 let cs = compile s
@@ -171,7 +151,7 @@ showImage()
 // **** mutate genome to create new art ******
 
 for _ in 0 .. 10 do
-  for i in 0 .. 20 do mutate cs rng cgn
+  for i in 0 .. 20 do mutate cs cgn
   showImage()
 
 //visualize program graph

@@ -1,18 +1,10 @@
-﻿#r "System.Runtime.Caching"
-#load "XorshiftRng.fs"
-#load "Cgp.fs"
-#load "CgpRun.fs"
-#r @"..\packages\Microsoft.Msagl.1.1.1\lib\net40\Microsoft.Msagl.dll"
-#r @"..\packages\Microsoft.Msagl.Drawing.1.1.1\lib\net40\Microsoft.Msagl.Drawing.dll"
-#r @"..\packages\Microsoft.Msagl.GraphViewerGDI.1.1.1\lib\net40\Microsoft.Msagl.GraphViewerGdi.dll"
-#load "GgpGraph.fs"
+﻿#load "SetEnv.fsx"
 
 open FsCgp
 open FsCgp.CgpBase
 open FsCgp.CgpRun
 open FsCgp.CgpGraph
 
-let rng = new XorshiftRng.XorshiftPRNG()
 
 //example taken from
 //https://github.com/DataWraith/cgp
@@ -37,8 +29,7 @@ let spec =
     BackLevel = None
     FunctionTable = ft
     MutationRate = 0.20
-    Constants = floatConsts rng 1 100.0 |> Some
-    CacheWith = Some floatCache
+    Constants = floatConsts 1 100.0 |> Some
   }
 
 //points fitting f(x) = x³ - 2x + 10.
@@ -57,26 +48,30 @@ let test_cases =
 let loss (y':float[]) (y:float[]) = (y'.[0] - y.[0]) ** 2.0 //square loss y' is output from the genome evaluation and y is actual output 
 
 let cspec = compile spec
+let cacheSpec = {Cache=createCache 1; Cspec=cspec; ConstGen=floatCache }
+let evaluator = createEvaluator cspec loss Basic (Cached cacheSpec)
+//let evaluator = createEvaluator cspec loss Parallel (Cached cacheSpec)
+//let evaluator = createEvaluator cspec loss Parallel (Dropout 0.1)
 
-let evaluator = defaultEvaluator cspec loss test_cases
-//let evaluator = defaultEvaluatorPar cspec loss test_cases
-
-let termination gen loss = List.head loss < 0.001 //|| gen > 100000
+let termination gen loss = List.head loss < 0.000001 //|| gen > 100000
 
 let currentBest = ref Unchecked.defaultof<_>
 
 let runAsync() =
   async {
-    do run1PlusLambda Verbose cspec 4 rng evaluator termination (fun indv -> currentBest := indv) None
+    do run1PlusLambda Verbose cspec 10  evaluator test_cases termination (fun indv -> currentBest := indv) None
   }
   |> Async.Start
 
 let showBest() = callGraph cspec currentBest.Value.Genome |> visualize
   
 (*
+
 runAsync()  //run this to find the best genome
 
 showBest()  //run this periodically to view the graph of the current best genome
+
+printGenome cspec currentBest.Value.Genome
 
 *)
 

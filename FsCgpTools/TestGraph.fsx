@@ -1,8 +1,15 @@
-﻿#load "SetEnv.fsx"
+﻿#r @"..\packages\Microsoft.Msagl.1.1.1\lib\net40\Microsoft.Msagl.dll"
+#r @"..\packages\Microsoft.Msagl.Drawing.1.1.1\lib\net40\Microsoft.Msagl.Drawing.dll"
+#r @"..\packages\Microsoft.Msagl.GraphViewerGDI.1.1.1\lib\net40\Microsoft.Msagl.GraphViewerGdi.dll"
+#I @"..\FsCgp"
+#load "XorshiftRng.fs"
+#load "Cgp.fs"
+#load "GgpGraph.fs"
 open FsCgp
 open FsCgp.CgpBase
 open FsCgp.CgpGraph
 
+let rng = new XorshiftRng.XorshiftPRNG()
 
 //example taken from
 //https://github.com/DataWraith/cgp
@@ -19,6 +26,19 @@ let funcs =
 
 let ft = funcs |> Array.map (fun (f,a,d) -> {F=f;Arity=a;Desc=d})
 
+let cnst = 
+  {
+    NumConstants = 1
+    ConstGen = fun() -> 
+      let sign = if rng.NextDouble() > 0.5 then 1.0 else -1.0
+      let v = rng.NextDouble() * 100.0
+      v * sign
+    Evolve = fun i -> 
+      let sign = if rng.NextDouble() > 0.5 then 1.0 else -1.0
+      let v = rng.NextDouble()
+      i + (sign * v)
+  }
+
 let spec = 
   {
     NumInputs = 1
@@ -27,7 +47,8 @@ let spec =
     BackLevel = None
     FunctionTable = ft
     MutationRate = 0.20
-    Constants = floatConsts 1 100. |> Some
+    Constants = Some cnst
+    CacheWith = None
   }
 
 let genome =
@@ -41,11 +62,13 @@ let genome =
 
 let cspec = compile spec
      
-// printGenome cspec genome
+//printGenome cspec genome
 
 let cg = callGraph cspec genome
 
-visualizeWithLabels [|"input label"|] cg 
+visualize cg
+
+visualizeWithLabels [|"Input Label"|] cg 
 
 
 

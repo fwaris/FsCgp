@@ -1,8 +1,7 @@
-﻿#load "XorshiftRng.fs"
+﻿#load "Probability.fs"
 #load "Cgp.fs"
 open FsCgp
 open FsCgp.CgpBase
-open XorshiftRng
 
 //0-1-2-3-[0-1-2]-[3-4-5]-[6-7-8]-[9-10-11]-[12-13-14]-[15-16-17]
 //         4       5       6       7         8          9
@@ -19,15 +18,6 @@ let funcs =
 
 let ft = funcs |> Array.map (fun f -> {F=f;Arity=2;Desc=""})
 
-let rng = XorshiftPRNG()
-
-let cnst = 
-  {
-    NumConstants = 1
-    ConstGen = fun() -> rng.Next(2)
-    Evolve = fun i -> if i = 0 then 1 else 0
-  }
-
 let s = 
   {
     NumInputs = 4
@@ -36,18 +26,17 @@ let s =
     BackLevel = None
     FunctionTable = ft
     MutationRate = 0.10
-    Constants = Some cnst
-    CacheWith = None
+    Constants =  intConsts 1 1000 |> Some
   }
 
 let cspec = compile s
 
-let genome = randomGenome cspec rng
+let genome = randomGenome cspec 
 
 let input = [|0;1;0;1|]
 
 for i in 0 .. 100000 do 
-  mutate cspec rng genome
+  mutate cspec genome
   let out1 = evalGenome cspec genome input
   let ev = evaluator cspec genome
   let out2 = ev input

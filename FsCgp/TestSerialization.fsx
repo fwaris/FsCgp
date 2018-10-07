@@ -1,11 +1,4 @@
-﻿#r "System.Runtime.Caching"
-#load "XorshiftRng.fs"
-#load "Cgp.fs"
-#load "CgpRun.fs"
-#r @"..\packages\Microsoft.Msagl.1.1.1\lib\net40\Microsoft.Msagl.dll"
-#r @"..\packages\Microsoft.Msagl.Drawing.1.1.1\lib\net40\Microsoft.Msagl.Drawing.dll"
-#r @"..\packages\Microsoft.Msagl.GraphViewerGDI.1.1.1\lib\net40\Microsoft.Msagl.GraphViewerGdi.dll"
-#load "GgpGraph.fs"
+﻿#load "SetEnv.fsx"
 #r @"..\packages\FsPickler.5.2\lib\net45\FsPickler.dll"
 #load "CgpSer.fs"
 
@@ -13,8 +6,6 @@ open FsCgp
 open FsCgp.CgpBase
 open FsCgp.CgpGraph
 open FsCgp
-
-let rng = new XorshiftRng.XorshiftPRNG()
 
 //example taken from
 //https://github.com/DataWraith/cgp
@@ -31,18 +22,6 @@ let funcs =
 
 let ft = funcs |> Array.map (fun (f,a,d) -> {F=f;Arity=a;Desc=d})
 
-let cnst = 
-  {
-    NumConstants = 1
-    ConstGen = fun() -> 
-      let sign = if rng.NextDouble() > 0.5 then 1.0 else -1.0
-      let v = rng.NextDouble() * 100.0
-      v * sign
-    Evolve = fun i -> 
-      let sign = if rng.NextDouble() > 0.5 then 1.0 else -1.0
-      let v = rng.NextDouble()
-      i + (sign * v)
-  }
 
 let spec = 
   {
@@ -52,8 +31,7 @@ let spec =
     BackLevel = None
     FunctionTable = ft
     MutationRate = 0.20
-    Constants = Some cnst
-    CacheWith = None
+    Constants = floatConsts 2 100. |> Some
   }
 
 let genome =

@@ -5,6 +5,8 @@ VisualStudioVersion = 15.0.28010.2016
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FsCgp", "FsCgp\FsCgp.fsproj", "{75A6FD5A-682B-41F5-BC5A-21D9A6D4BFA0}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FsCgpTools", "FsCgpTools\FsCgpTools.fsproj", "{7C89F390-5EDE-4BF1-AC8E-4DBE2E4AE0B7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{75A6FD5A-682B-41F5-BC5A-21D9A6D4BFA0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{75A6FD5A-682B-41F5-BC5A-21D9A6D4BFA0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{75A6FD5A-682B-41F5-BC5A-21D9A6D4BFA0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7C89F390-5EDE-4BF1-AC8E-4DBE2E4AE0B7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7C89F390-5EDE-4BF1-AC8E-4DBE2E4AE0B7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7C89F390-5EDE-4BF1-AC8E-4DBE2E4AE0B7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7C89F390-5EDE-4BF1-AC8E-4DBE2E4AE0B7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

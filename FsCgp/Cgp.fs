@@ -3,7 +3,6 @@
 //Chapter 2. Cartesian Genetic Programming. Julian F. Miller.  
 //https://www.springer.com/cda/content/document/cda_downloaddocument/9783642173097-c2.pdf
 
-
 ///entry of the function table
 type Func<'a> =
   {
@@ -32,13 +31,10 @@ type Spec<'a> =
     FunctionTable : Func<'a>[]       //function table
     MutationRate  : float                   //the %age of genes to mutate
     Constants     : ConstSpec<'a> option    //number of constants
-    CacheWith     : ('a->string) option     //if a function is supplied to convert 'a to string, caching is used
-                                            //this function is needed to store constant values (of type 'a) 
-                                            //as part of the cache key string
   }
 
 ///cached specification created by the 'compile' function (not to be directly created by user)
-type SpecCache<'a> =
+type CompiledSpec<'a> =
   {
     Spec           : Spec<'a>
     NodeLen        : int
@@ -55,8 +51,35 @@ type SpecCache<'a> =
   }
 
 module CgpBase =
-  open XorshiftRng
   open System.Text
+  open System.IO
+
+  ///utility function to create ConstSpec for floats
+  let floatConsts numConst maxConst = 
+    {
+      NumConstants = numConst
+      ConstGen = fun() -> 
+        let sign = if Probability.RNG.Value.NextDouble() > 0.5 then 1.0 else -1.0
+        let v = Probability.RNG.Value.NextDouble() * maxConst
+        v * sign //|> int |> float
+      Evolve = fun i -> 
+        let sign = if Probability.RNG.Value.NextDouble() > 0.5 then 1.0 else -1.0
+        let v = Probability.RNG.Value.NextDouble()
+        i + (sign * v) //|> int |> float
+    }
+
+  ///utility function to create ConstSpec for ints
+  let intConsts numConst maxConst = 
+    {
+      NumConstants = numConst
+      ConstGen = fun() -> 
+        let sign = if Probability.RNG.Value.NextDouble() > 0.5 then 1 else -1
+        let v = Probability.RNG.Value.Next(maxConst)
+        v * sign //|> int |> float
+      Evolve = fun i -> 
+        let sign = if Probability.RNG.Value.NextDouble() > 0.5 then 1 else -1
+        i + sign
+    }
 
   ///check settings and cache some values to avoid needless re-computation
   let compile spec = 
@@ -209,15 +232,15 @@ module CgpBase =
     [| for i in cspec.OutputOffset  .. genome.G.Length-1-> evalNode genome.G.[i] |]
 
   ///mutate the genome at the given index honoring allele constraints
-  let mutateAt cspec (rng:XorshiftPRNG) (genome:Genome<_>) idx =
+  let mutateAt cspec (genome:Genome<_>) idx =
       if isOutput cspec idx then                                        //output node 
-        let n = rng.Next(cspec.RefSize)                                 //point to random upstream node
+        let n = Probability.RNG.Value.Next(cspec.RefSize)                                 //point to random upstream node
         genome.G.[idx] <- n
       elif isFunction cspec idx then                                    //function node
-        let n = rng.Next(cspec.FtbleWithConst.Length)               
+        let n = Probability.RNG.Value.Next(cspec.FtbleWithConst.Length)               
         genome.G.[idx] <- n
         if isConstant cspec n then                                      //if 'constant' function was chosen
-          let c = rng.Next(genome.Constants.Length)                     //set parameter to valid constant
+          let c = Probability.RNG.Value.Next(genome.Constants.Length)                     //set parameter to valid constant
           genome.G.[idx+1] <- c
       else 
         let nodeId = nodeIdx cspec idx                                        //get function gene for chosen connection
@@ -229,18 +252,18 @@ module CgpBase =
         else
           let minRange = max (nodeId - 1 - cspec.EffBkLvl) 0            //regular connection 
           let maxRange = nodeId
-          let n = rng.Next(minRange,maxRange) 
+          let n = Probability.RNG.Value.Next(minRange,maxRange) 
           genome.G.[idx] <- n                                                 //set to random node
 
   ///perform a point mutation at a random location
-  let mutate1 cspec (rng:XorshiftPRNG) genome =
-      let idx = rng.Next(cspec.GenomeSize)
-      mutateAt cspec rng genome idx
+  let mutate1 cspec genome =
+      let idx = Probability.RNG.Value.Next(cspec.GenomeSize)
+      mutateAt cspec genome idx
 
   ///mutate genome using spec mutation rate
-  let mutate cspec rng genome =
+  let mutate cspec genome =
     for _ in 0..cspec.NumMtn-1 do
-      mutate1 cspec rng genome
+      mutate1 cspec genome
 
   ///create a genome from a compiled spec
   let createGenome cspec = 
@@ -248,10 +271,10 @@ module CgpBase =
     {G=Array.zeroCreate cspec.GenomeSize; Constants=cnsts}
 
   ///return a new randomized genome that honors allele constraints
-  let randomGenome<'a> (cspec:SpecCache<'a>) rng = 
+  let randomGenome<'a> (cspec:CompiledSpec<'a>)  = 
     let g = createGenome cspec
     for i in 0..cspec.GenomeSize-1 do
-      mutateAt cspec rng  g i
+      mutateAt cspec  g i
     g
 
   let copyGenome g = {g with G=Array.copy g.G; Constants=Array.copy g.Constants}
@@ -311,7 +334,7 @@ module CgpBase =
   and Node<'a> = Const of 'a | Fun of Call<'a> | Input of int | Out of int * Node<'a>
 
   ///generates the call graph of the genome 
-  let callGraph<'a> (cspec:SpecCache<'a>) (genome:Genome<'a>) =
+  let callGraph<'a> (cspec:CompiledSpec<'a>) (genome:Genome<'a>) =
     let genes = activeGenes cspec genome
     let nodes = genes |> Array.mapi (fun i g -> i,g) |> Array.filter snd
     let nodes = 
@@ -360,7 +383,7 @@ module CgpBase =
   /// prints the genome as pseudo F# code 
   /// uses function table descriptions as the functions used
   /// in printed code
-  let printGenome<'a> (cspec:SpecCache<'a>) (genome:Genome<'a>) =
+  let printGenome<'a> (cspec:CompiledSpec<'a>) (genome:Genome<'a>) =
     let cg = callGraph cspec genome
     let sb = StringBuilder()
     let (!>) s = sb.Append(s:string) |> ignore
@@ -398,6 +421,25 @@ module CgpBase =
     ! "     |]"
     ! "}"
     
+
+  let writeGenome ident genome (sw:StreamWriter) = 
+    let ids = new System.String([|for _ in 1 .. ident -> ' '|])
+    let (!) s = sw.Write ids; sw.WriteLine (s:string)
+    ! "{"
+    ! "  G = "
+    ! "     [|"
+    genome.G 
+                |> Seq.chunkBySize 50 
+                |> Seq.iter (fun c -> ! (sprintf "       %s"  (System.String.Join(";",c))))
+    ! "     |]"
+    ! "  Constants = "
+    ! "     [|"
+    genome.Constants |> Seq.iter (fun v -> ! (sprintf "       %A" v))
+    ! "     |]"
+    ! "}"
+
+
+
   ///prints genome as valid code snippet (for float and int types) 
   ///to reconstruct genome in code
   ///useful for persisting and later re-using the genome

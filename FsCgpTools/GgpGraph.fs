@@ -14,7 +14,7 @@ module CgpGraph =
       let v = n.UserData :?> Node<'a>
       match v with
       | Fun c -> () 
-      | Input i  -> n.Attr.Shape <- Microsoft.Msagl.Drawing.Shape.Ellipse
+      | Input i  -> //n.Attr.Shape <- Microsoft.Msagl.Drawing.Shape.Ellipse
                     n.Attr.FillColor <- Microsoft.Msagl.Drawing.Color.LightSeaGreen
       | Out (i,r) -> n.Attr.Shape <- Microsoft.Msagl.Drawing.Shape.Ellipse
                      n.Attr.FillColor <- Microsoft.Msagl.Drawing.Color.LavenderBlush
