@@ -195,3 +195,47 @@ module CgpRun =
         loop (i+1) ((parent'.Loss::hist) |> List.truncate 5) parent'
 
     loop 1 [] parent
+
+  ///see run1PlusLambda for details
+  ///dynamic version where the environment (test_cases) can change
+  ///at any time invalidating existing losses
+  let inline run1PlusLambdaDynamic 
+    verbosity 
+    cspec
+    lambda
+    (evaluator:Evaluator<_>)
+    (testStream:IObservable<TestCases<_>>)
+    (terminator:Terminator) 
+    ///callback to get new best individual when found
+    postNewBest 
+    startIndv
+    =
+    let change = ref false;
+    let current = ref [||]
+    let _  = 
+        testStream.Subscribe(fun test_cases ->
+            current := test_cases
+            change := true
+            match verbosity with Verbose -> printfn "test cases changed"  | _ -> ()
+            )
+
+    let rec loop i hist parent =
+      if not(List.isEmpty hist) && terminator i hist then 
+        match verbosity with Verbose -> printfn "done in gen %d" i | _ -> ()
+      else
+        let parent =
+            if !change then
+                let p = copyIndv parent
+                p.Loss <- evaluator !current parent.Genome //update parent loss if test cases changed
+                change := false
+                p
+            else
+                parent
+        let parent' = runGen cspec parent lambda evaluator !current
+        if parent'.Loss < parent.Loss then
+          match verbosity with Verbose -> printfn "new best %.10f" parent'.Loss | _ -> ()
+          postNewBest parent'
+        loop (i+1) ((parent'.Loss::hist) |> List.truncate 5) parent'
+
+    let initIndv = startIndv |> Option.defaultValue {Genome=randomGenome cspec; Loss=System.Double.MaxValue}
+    loop 1 [] initIndv

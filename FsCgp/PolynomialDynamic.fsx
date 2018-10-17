@@ -1,9 +1,10 @@
 ﻿#load "SetEnv.fsx"
-//learn a function to fit polimonial data
+// dynamic version of polynomial learner
 open FsCgp
 open FsCgp.CgpBase
 open FsCgp.CgpRun
 open FsCgp.CgpGraph
+open System.Threading
 
 
 //example taken from
@@ -48,26 +49,37 @@ let test_cases =
 let loss (y':float[]) (y:float[]) = (y'.[0] - y.[0]) ** 2.0 //square loss y' is output from the genome evaluation and y is actual output 
 
 let cspec = compile spec
-let cacheSpec = {Cache=createCache 1; Cspec=cspec; ConstGen=floatCache }
-let evaluator = createEvaluator cspec loss Basic (Cached cacheSpec)
-//let evaluator = createEvaluator cspec loss Parallel (Cached cacheSpec)
-//let evaluator = createEvaluator cspec loss Parallel (Dropout 0.1)
 
-let termination gen loss = List.head loss < 0.000001 //|| gen > 100000
+//********** cannot use caching with dynamic ***** 
+//let cacheSpec = {Cache=createCache 1; Cspec=cspec; ConstGen=floatCache }
+//let evaluator = createEvaluator cspec loss Basic (Cached cacheSpec)
+//let evaluator = createEvaluator cspec loss Parallel (Cached cacheSpec)
+let evaluator = createEvaluator cspec loss Parallel Default
+
+let termination gen loss = gen > 100000
 
 let currentBest = ref Unchecked.defaultof<_>
 
+let cts = new  CancellationTokenSource()
+let obsTestCases,fps = Observable.createObservableAgent cts.Token None //observable to send new data to learner
+
 let runAsync() =
   async {
-    do run1PlusLambda Verbose cspec 10  evaluator test_cases termination (fun indv -> currentBest := indv) None
+    do run1PlusLambdaDynamic 
+        Verbose cspec 10  evaluator obsTestCases 
+        termination (fun indv -> currentBest := indv) None
   }
   |> Async.Start
 
 let showBest() = callGraph cspec currentBest.Value.Genome |> visualize
+
+let postTests() = fps test_cases //sends (new or updated) data to let the learner dynamically adapt to changing data
   
 (*
 
 runAsync()  //run this to find the best genome
+
+postTests() //run this to update the test cases
 
 showBest()  //run this periodically to view the graph of the current best genome
 

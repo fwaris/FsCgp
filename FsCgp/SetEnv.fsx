@@ -1,4 +1,5 @@
 ﻿#r "System.Runtime.Caching"
+#load "ObservableExt.fs"
 #load "Probability.fs"
 #load "Cgp.fs"
 #load "CgpRun.fs"

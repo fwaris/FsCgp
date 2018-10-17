@@ -41,8 +41,9 @@
   </PropertyGroup>
   <Import Project="$(FSharpTargetsPath)" />
   <ItemGroup>
-    <Compile Include="AssemblyInfo.fs" />
     <Content Include="packages.config" />
+    <Compile Include="AssemblyInfo.fs" />
+    <Compile Include="ObservableExt.fs" />
     <Compile Include="Probability.fs" />
     <Compile Include="Cgp.fs" />
     <Compile Include="CgpRun.fs" />
@@ -51,6 +52,7 @@
     <None Include="BaseTest.fsx" />
     <None Include="CgpArt.fsx" />
     <None Include="Polynomial.fsx" />
+    <None Include="PolynomialDynamic.fsx" />
     <None Include="TestPrint.fsx" />
     <None Include="TestSerialization.fsx" />
     <None Include="SetEnv.fsx" />
