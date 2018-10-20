@@ -13,7 +13,7 @@ type Verbosity = Silent | Verbose
 type EvaluatorSpec<'a> = 
     | Default 
     | Cached of CacheSpec<'a> 
-    | Dropout of float 
+    | Dropout of dropPct:float * resampleAfter:int
 
 ///generation -> loss history -> bool (true to terminate run)
 type Terminator = int->float list->bool 
@@ -121,9 +121,14 @@ module CgpRun =
                 cacheSpec.Cache.Add(key,loss,DateTimeOffset.Now.AddHours(2.0)) |> ignore
             loss
 
-      let dropoutEvaluator<'a> (baseEvaluator:Evaluator<'a>) dropPct  =
+      let dropoutEvaluator<'a> (baseEvaluator:Evaluator<'a>) dropPct resampleAfter =
+        let sample = ref [||]
+        let count = ref 0                 //resampling  at every evalution is unstable (resampleAter should be twice the population size)
         fun test_cases genome ->
-            let test_cases = test_cases |> Probability.Seq.sample (1.0 - dropPct) |> Seq.toArray
+            if !count = 0 then
+                sample := test_cases |> Probability.Seq.sample (1.0 - dropPct) |> Seq.toArray
+            count := !count + 1
+            if !count > resampleAfter then count := 0
             baseEvaluator test_cases genome
 
   let createEvaluator<'a> cspec loss evalConcurrency evalSpec : (('a[]*'a[])[] -> Genome<'a>->float) = 
@@ -134,7 +139,7 @@ module CgpRun =
     match evalSpec with
     | Default -> baseEvaluator 
     | Cached cs -> Evaluation.cachedEvaluator<'a> baseEvaluator cs
-    | Dropout d -> Evaluation.dropoutEvaluator<'a> baseEvaluator d
+    | Dropout (d,c) -> Evaluation.dropoutEvaluator<'a> baseEvaluator d c
         
         
   ///run a single generation

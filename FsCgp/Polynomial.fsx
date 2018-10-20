@@ -49,9 +49,9 @@ let loss (y':float[]) (y:float[]) = (y'.[0] - y.[0]) ** 2.0 //square loss y' is 
 
 let cspec = compile spec
 let cacheSpec = {Cache=createCache 1; Cspec=cspec; ConstGen=floatCache }
-let evaluator = createEvaluator cspec loss Basic (Cached cacheSpec)
+//let evaluator = createEvaluator cspec loss Basic (Cached cacheSpec)
 //let evaluator = createEvaluator cspec loss Parallel (Cached cacheSpec)
-//let evaluator = createEvaluator cspec loss Parallel (Dropout 0.1)
+let evaluator = createEvaluator cspec loss Parallel (Dropout (0.1, 10))
 
 let termination gen loss = List.head loss < 0.000001 //|| gen > 100000
 

@@ -16,6 +16,7 @@ type ConstSpec<'a> =
   {
     NumConstants : int
     ConstGen     : unit->'a
+    Max          : 'a
     Evolve       : 'a->'a
   }
 
@@ -58,6 +59,7 @@ module CgpBase =
   let floatConsts numConst maxConst = 
     {
       NumConstants = numConst
+      Max = maxConst
       ConstGen = fun() -> 
         let sign = if Probability.RNG.Value.NextDouble() > 0.5 then 1.0 else -1.0
         let v = Probability.RNG.Value.NextDouble() * maxConst
@@ -72,6 +74,7 @@ module CgpBase =
   let intConsts numConst maxConst = 
     {
       NumConstants = numConst
+      Max = maxConst
       ConstGen = fun() -> 
         let sign = if Probability.RNG.Value.NextDouble() > 0.5 then 1 else -1
         let v = Probability.RNG.Value.Next(maxConst)
