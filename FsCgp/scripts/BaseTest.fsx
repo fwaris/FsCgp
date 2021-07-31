@@ -1,4 +1,5 @@
-﻿#load "Probability.fs"
+﻿#I ".."
+#load "FsCgpProb.fs"
 #load "Cgp.fs"
 open FsCgp
 open FsCgp.CgpBase

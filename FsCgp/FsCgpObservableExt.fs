@@ -62,51 +62,51 @@ module Observable =
         let mutable state:('a option * 'b option) = (None,None)
         { new IObservable<'a option *'b option> with
             member x.Subscribe(observer) = //TODO: need to dispose both 
-              obs1.Subscribe (fun a -> state <-  (Some a, snd state); observer.OnNext state) |> ignore
-              obs2.Subscribe (fun b -> state <- (fst state, Some b); observer.OnNext state)
+                obs1.Subscribe (fun a -> state <-  (Some a, snd state); observer.OnNext state) |> ignore
+                obs2.Subscribe (fun b -> state <- (fst state, Some b); observer.OnNext state)
         }
 
     let separate (obs:IObservable<'a option*'b option>) =
         { new IObservable<'a> with
             member x.Subscribe(observer) =
-              obs.Subscribe (function (Some a,_) ->  observer.OnNext a | _ -> () ) 
+                obs.Subscribe (function (Some a,_) ->  observer.OnNext a | _ -> () ) 
         }
         ,
         { new IObservable<'b> with
             member x.Subscribe(observer) =
-              obs.Subscribe (function (_,Some b) ->  observer.OnNext b | _ -> () )
+                obs.Subscribe (function (_,Some b) ->  observer.OnNext b | _ -> () )
         }
 
     let withI (obs:IObservable<'a>) =
         let mutable state = 0
         { new IObservable<int *'a> with
             member x.Subscribe(observer) = //TODO: need to dispose both 
-              obs.Subscribe(fun a -> state <- state + 1; observer.OnNext (state,a))
+                obs.Subscribe(fun a -> state <- state + 1; observer.OnNext (state,a))
         }
 
     let min (obs:IObservable<'a>)=
         let mutable state = Unchecked.defaultof<'a>
         { new IObservable<'a> with
             member x.Subscribe(observer) = //TODO: need to dispose both 
-              obs.Subscribe(fun a -> 
+                obs.Subscribe(fun a -> 
                 if state = Unchecked.defaultof<'a> then
-                  state <- a
-                  observer.OnNext (state)
+                    state <- a
+                    observer.OnNext (state)
                 elif a < state then
-                  state <- a
-                  observer.OnNext (state))
+                    state <- a
+                    observer.OnNext (state))
         }
 
     let max (obs:IObservable<'a>)=
         let mutable state = Unchecked.defaultof<'a>
         { new IObservable<'a> with
             member x.Subscribe(observer) = //TODO: need to dispose both 
-              obs.Subscribe(fun a -> 
+                obs.Subscribe(fun a -> 
                 if state = Unchecked.defaultof<'a> then
-                  state <- a
-                  observer.OnNext (state)
+                    state <- a
+                    observer.OnNext (state)
                 elif a > state then
-                  state <- a
-                  observer.OnNext (state))
+                    state <- a
+                    observer.OnNext (state))
         }
 

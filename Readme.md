@@ -1,4 +1,5 @@
 # FsCgp
+
 An F# library for Cartesian Genetic Programming.
 
 See [Chapter 2. Cartesian Genetic Programming. Julian F. Miller.](https://www.springer.com/cda/content/document/cda_downloaddocument/9783642173097-c2.pdf) for a comprehensive tutorial.
@@ -8,10 +9,12 @@ See [Chapter 2. Cartesian Genetic Programming. Julian F. Miller.](https://www.sp
 - <a href="art/FunctionGraph.bmp"><img src="art/FunctionGraph.bmp" height="150"></a>
 
 ## GP examples
-- Symbolic Regression: [Polynomial.fsx](FsCgp/Polynomial.fsx)
+
+- Symbolic Regression: [Polynomial.fsx](FsCgp/scripts/Polynomial.fsx)
 
 ## Generative art 
-- Code: [CgpArt.fsx](FsCgp/CgpArt.fsx)
+
+- Code: [CgpArt.fsx](FsCgp/scripts/CgpArt.fsx)
 
 - <a href="art/Picture1.png"><img src="art/Picture1.png" height="150"></a>   
 

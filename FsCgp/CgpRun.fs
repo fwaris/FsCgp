@@ -21,7 +21,7 @@ type Terminator = int->float list->bool
 module CgpRun =
   open System.Threading
   open System.IO
-  open Microsoft.CSharp
+  //open Microsoft.CSharp
 
   ///function to convert float to string to be used as part of caching key
   let floatCache (f:float) = String.Format("{0:0.##################}",f)

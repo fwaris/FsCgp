@@ -1,6 +1,5 @@
 ﻿#load "SetEnv.fsx"
-#r @"..\packages\FsPickler.5.2\lib\net45\FsPickler.dll"
-#load "CgpSer.fs"
+#load "..\CgpSer.fs"
 
 open FsCgp
 open FsCgp.CgpBase
