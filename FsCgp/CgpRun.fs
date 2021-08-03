@@ -58,12 +58,11 @@ module CgpRun =
         fun test_cases genome ->
             let ev = evaluator cspec genome
             let fit =
-              (0.0, test_cases) 
-              ||> Seq.fold(fun accLoss (x,y) -> 
+              test_cases
+              |> Seq.averageBy(fun (x,y) -> 
                 let y' = ev x
                 let caseLoss = loss_func y y'
-                accLoss + caseLoss
-              )
+                caseLoss)
             if System.Double.IsNaN fit then System.Double.MaxValue else fit
 
       ///Wrapper type for parallel evaluation
