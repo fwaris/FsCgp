@@ -1,4 +1,4 @@
-﻿#load "../FsCgp/scripts/SetEnv.fsx"
+﻿#load "../FsCgpSamples/scripts/SetEnv.fsx"
 open FsCgp
 open FsCgp.CgpBase
 open FsCgp.CgpGraph

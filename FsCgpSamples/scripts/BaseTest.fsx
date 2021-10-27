@@ -1,6 +1,6 @@
 ﻿#I ".."
-#load "FsCgpProb.fs"
-#load "Cgp.fs"
+#load "../FsCgp/FsCgpProb.fs"
+#load "../FsCgp/Cgp.fs"
 open FsCgp
 open FsCgp.CgpBase
 

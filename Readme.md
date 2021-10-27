@@ -10,11 +10,11 @@ See [Chapter 2. Cartesian Genetic Programming. Julian F. Miller.](https://www.sp
 
 ## GP examples
 
-- Symbolic Regression: [Polynomial.fsx](FsCgp/scripts/Polynomial.fsx)
+- Symbolic Regression: [Polynomial.fsx](FsCgpSamples/scripts/Polynomial.fsx)
 
 ## Generative art 
 
-- Code: [CgpArt.fsx](FsCgp/scripts/CgpArt.fsx)
+- Code: [CgpArt.fsx](FsCgpSamples/scripts/CgpArt.fsx)
 
 - <a href="art/Picture1.png"><img src="art/Picture1.png" height="150"></a>   
 

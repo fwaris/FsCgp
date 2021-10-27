@@ -1,0 +1,13 @@
+﻿#r "nuget: FsPickler"
+#r "nuget: AutomaticGraphLayout.GraphViewerGDI"
+#I ".."
+#r "System.Runtime.Caching"
+#load "../FsCgp/FsCgpObservableExt.fs"
+#load "../FsCgp/FsCgpProb.fs"
+#load "../FsCgp/Cgp.fs"
+#load "../FsCgp/CgpRun.fs"
+#I @"..\..\FsCgpTools"
+#r "System.Windows.Forms"
+//#r "Sytem.Drawing"
+#load "GgpGraph.fs"
+

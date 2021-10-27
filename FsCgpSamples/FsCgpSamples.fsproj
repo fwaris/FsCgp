@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net6.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="scripts\BaseTest.fsx" />
+    <None Include="scripts\TestSerialization.fsx" />
+    <None Include="scripts\TestPrint.fsx" />
+    <None Include="scripts\SetEnv.fsx" />
+    <None Include="scripts\PolynomialDynamic.fsx" />
+    <None Include="scripts\Polynomial.fsx" />
+    <None Include="scripts\CgpArt.fsx" />
+    <Compile Include="Pgm.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FsCgp\FsCgp.fsproj" />
+  </ItemGroup>
+
+  <ItemGroup />
+
+</Project>
