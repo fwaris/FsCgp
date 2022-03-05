@@ -122,14 +122,22 @@ module CgpRun =
     let parent' = if bestChild.Loss < parent.Loss then bestChild else parent
     parent'
         
-  ///run a single generation for mu parents
-  let runGenMu cspec parents mu lambda (evaluator:Evaluator<_>) (test_cases:TestCases<_>) =
+  ///'speciated' mu plus lambda - seems to perform better
+  let runGenMuSpeciated cspec parents mu lambda (evaluator:Evaluator<_>) (test_cases:TestCases<_>) =
     let explrtryPop = genPop cspec 2 //exploratory genomes
     explrtryPop |> List.iter (fun i -> i.Loss<-evaluator test_cases i.Genome)
     let bestExpIndv = explrtryPop |> List.minBy (fun i->i.Loss)
     let children = parents |> List.map (runParent cspec lambda evaluator test_cases)
     let orderedIndvs = children @ [bestExpIndv] |> List.sortBy (fun i -> i.Loss)
     orderedIndvs |> List.truncate mu
+
+  ///traditional mu + lambda 
+  let runGenMu cspec parents mu lambda (evaluator:Evaluator<_>) (test_cases:TestCases<_>) =
+    let explrtryPop = genPop cspec 2 //exploratory genomes
+    let children = (parents |> List.collect (fun p -> [for i in 1 .. lambda -> copyIndv p])) @ explrtryPop |> List.toArray
+    Array.Parallel.iter(fun p -> p.Loss <- evaluator test_cases p.Genome) children
+    let orderedIndvs = Seq.append parents children |> Seq.sortBy (fun i -> i.Loss)
+    orderedIndvs |> Seq.truncate mu |> Seq.toList
         
   ///mu parents + lambda mutated individuals method
   ///each generation, the best mu individuals are picked as parents
@@ -154,7 +162,7 @@ module CgpRun =
         if not(List.isEmpty hist) && terminator i hist then 
             match verbosity with Verbose -> printfn "done in gen %d" i | _ -> ()
         else
-            let parents' = runGenMu cspec parents mu lambda evaluator test_cases
+            let parents' = runGenMuSpeciated cspec parents mu lambda evaluator test_cases
             if parents'.[0].Loss < parents.[0].Loss then
                 match verbosity with Verbose -> printfn "new best %.10f" parents'.[0].Loss | _ -> ()
                 postNewBest parents'.[0]
@@ -216,7 +224,7 @@ module CgpRun =
                 p
             else
                 parent
-        let parent' = runGenMu cspec [parent] 1 lambda evaluator current.Value |> List.head
+        let parent' = runGenMuSpeciated cspec [parent] 1 lambda evaluator current.Value |> List.head
         if parent'.Loss < parent.Loss then
           match verbosity with Verbose -> printfn "new best %.10f" parent'.Loss | _ -> ()
           postNewBest parent'
