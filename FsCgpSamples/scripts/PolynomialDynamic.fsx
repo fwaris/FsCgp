@@ -3,7 +3,7 @@
 open FsCgp
 open FsCgp.CgpBase
 open FsCgp.CgpRun
-open FsCgp.CgpGraph
+//open FsCgp.CgpGraph
 open System.Threading
 
 
@@ -71,7 +71,7 @@ let runAsync() =
   }
   |> Async.Start
 
-let showBest() = callGraph cspec currentBest.Value.Genome |> visualize
+let showBest() = callGraph cspec currentBest.Value.Genome //|> visualize
 
 let postTests() = fps test_cases //sends (new or updated) data to let the learner dynamically adapt to changing data
   

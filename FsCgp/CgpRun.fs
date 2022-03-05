@@ -1,18 +1,15 @@
 ﻿namespace FsCgp
 open CgpBase
 open System
-open System.Runtime.Caching
 
 type Indv<'a> = {Genome:Genome<'a>; mutable Loss : float} //fitter individual has lower loss
 type TestCases<'a> = ('a[]*'a[])[]
 type Evaluator<'a> = TestCases<'a>->Genome<'a>->float
 type Evalconcurrency = Parallel | Basic
-type CacheSpec<'a> = {Cache:MemoryCache; Cspec:CompiledSpec<'a>; ConstGen:'a->string}
 type Verbosity = Silent | Verbose
 
 type EvaluatorSpec<'a> = 
     | Default 
-    | Cached of CacheSpec<'a> 
     | Dropout of dropPct:float * resampleAfter:int
 
 ///generation -> loss history -> bool (true to terminate run)
@@ -45,7 +42,7 @@ module CgpRun =
     printfn  " Loss = %f" indv.Loss
     printfn "}"
 
-  let genPop (cspec:CompiledSpec<'a>) sz = [|for i in 0..sz-1 -> {Genome=randomGenome cspec; Loss=System.Double.MaxValue} |]
+  let genPop (cspec:CompiledSpec<'a>) sz = [for i in 0..sz-1 -> {Genome=randomGenome cspec; Loss=System.Double.MaxValue}]
 
   let copyIndv i = {i with Genome=copyGenome i.Genome; Loss=i.Loss}
 
@@ -94,40 +91,14 @@ module CgpRun =
         let k = String.Join("_",Seq.toArray parms)
         k
 
-      let cachedEvaluator<'a> (baseEvaluator:Evaluator<'a>) (cacheSpec:CacheSpec<'a>) =
-        fun test_cases genome ->
-            let key = genKey cacheSpec.ConstGen cacheSpec.Cspec genome
-            let ci = cacheSpec.Cache.Item key
-            let loss =
-              if ci <> null then
-                let cacheLoss = ci :?> float
-                (*
-                //validation
-                let cacheIndv = ci :?> Indv<'a>
-                let cacheLoss = cacheIndv.Loss
-                let eLoss = evaluator indv.Genome
-                if eLoss <> cacheLoss then 
-                  let mC = genomeMask cspec cacheIndv.Genome
-                  let mI = genomeMask cspec indv.Genome
-                  dumpGenome cacheIndv.Genome
-                  dumpGenome indv.Genome 
-                  failwithf "loss mismatc %f<>%f" eLoss cacheLoss
-                  *)
-                cacheLoss
-              else
-                baseEvaluator test_cases genome
-            if ci = null then
-                cacheSpec.Cache.Add(key,loss,DateTimeOffset.Now.AddHours(2.0)) |> ignore
-            loss
-
       let dropoutEvaluator<'a> (baseEvaluator:Evaluator<'a>) dropPct resampleAfter =
         let sample = ref [||]
         let count = ref 0                 //resampling  at every evalution is unstable (resampleAter should be twice the population size)
         fun test_cases genome ->
-            if !count = 0 then
-                sample := test_cases |> Probability.Seq.sample (1.0 - dropPct) |> Seq.toArray
-            count := !count + 1
-            if !count > resampleAfter then count := 0
+            if count.Value = 0 then
+                sample.Value <- test_cases |> Probability.Seq.sample (1.0 - dropPct) |> Seq.toArray
+            count.Value <- count.Value + 1
+            if count.Value > resampleAfter then count.Value <- 0
             baseEvaluator test_cases genome
 
   let createEvaluator<'a> cspec loss evalConcurrency evalSpec : (('a[]*'a[])[] -> Genome<'a>->float) = 
@@ -137,37 +108,59 @@ module CgpRun =
         | Basic -> Evaluation.defaultEvaluator<'a> cspec loss
     match evalSpec with
     | Default -> baseEvaluator 
-    | Cached cs -> Evaluation.cachedEvaluator<'a> baseEvaluator cs
     | Dropout (d,c) -> Evaluation.dropoutEvaluator<'a> baseEvaluator d c
-        
-        
-  ///run a single generation
-  let runGen cspec parent popSz (evaluator:Evaluator<_>) (test_cases:TestCases<_>) =
-    let pop = genPop cspec 2 //exploratory genomes
-    pop |> Array.iter (fun i -> i.Loss<-evaluator test_cases i.Genome)
-    let bestPop = pop |> Array.minBy (fun i->i.Loss)
-    let children = 
-      [for i in 1 .. popSz do 
-        let child = copyIndv parent
-        mutate cspec child.Genome
-        child.Loss <- evaluator test_cases child.Genome
-        yield child
-      ]
-    let bestChild = children |> List.minBy (fun i -> i.Loss)
-    //let child = copyIndv parent
-    //mutate cspec rng child.Genome
-    //child.Loss <- evaluator child.Genome
-    let parent' = if parent.Loss < bestChild.Loss then parent else bestChild
-    let parent' = 
-      if parent'.Loss < bestPop.Loss then 
-        parent' 
-      else 
-        bestPop
-    parent'
 
-  let createCache n =
-    let name =  (sprintf "FsCgp_%d_%d" (DateTime.Now.ToFileTime()) n)
-    new MemoryCache(name)
+  let runParent cspec lambda (evaluator:Evaluator<_>) (test_cases:TestCases<_>) parent =
+    let children = 
+        [for i in 1 .. lambda do 
+            let child = copyIndv parent
+            mutate cspec child.Genome
+            child.Loss <- evaluator test_cases child.Genome
+            yield child
+        ]
+    let bestChild = children |> List.minBy (fun x->x.Loss)
+    let parent' = if bestChild.Loss < parent.Loss then bestChild else parent
+    parent'
+        
+  ///run a single generation for mu parents
+  let runGenMu cspec parents mu lambda (evaluator:Evaluator<_>) (test_cases:TestCases<_>) =
+    let explrtryPop = genPop cspec 2 //exploratory genomes
+    explrtryPop |> List.iter (fun i -> i.Loss<-evaluator test_cases i.Genome)
+    let bestExpIndv = explrtryPop |> List.minBy (fun i->i.Loss)
+    let children = parents |> List.map (runParent cspec lambda evaluator test_cases)
+    let orderedIndvs = children @ [bestExpIndv] |> List.sortBy (fun i -> i.Loss)
+    orderedIndvs |> List.truncate mu
+        
+  ///mu parents + lambda mutated individuals method
+  ///each generation, the best mu individuals are picked as parents
+
+  let runMuPlusLambda 
+    verbosity 
+    cspec
+    mu
+    lambda
+    (evaluator:Evaluator<_>)
+    (test_cases:TestCases<_>)
+    (terminator:Terminator) 
+    ///callback to get new best individual when found
+    postNewBest 
+    startIndv =
+    let parents = 
+        startIndv 
+        |> Option.map(fun i -> genPop cspec (mu-1) @ [i])
+        |> Option.defaultValue (genPop cspec mu)
+
+    let rec loop i hist parents =
+        if not(List.isEmpty hist) && terminator i hist then 
+            match verbosity with Verbose -> printfn "done in gen %d" i | _ -> ()
+        else
+            let parents' = runGenMu cspec parents mu lambda evaluator test_cases
+            if parents'.[0].Loss < parents.[0].Loss then
+                match verbosity with Verbose -> printfn "new best %.10f" parents'.[0].Loss | _ -> ()
+                postNewBest parents'.[0]
+            let hist' = ((parents' |> List.map (fun x->x.Loss)) @ hist) |> List.truncate 5
+            loop (i+1) hist' parents'
+    loop 1 [] parents
 
   ///one parent + lambda random individuals method
   ///each generation, the best individual is picked as parent
@@ -175,7 +168,7 @@ module CgpRun =
   ///currentBest is updated as new best indvidual is found
   //this could be a long running process so intermediate bests are useful for 
   //visualization and saving
-  let inline run1PlusLambda 
+  let run1PlusLambda 
     verbosity 
     cspec
     lambda
@@ -186,19 +179,7 @@ module CgpRun =
     postNewBest 
     startIndv
     =
-    let parent = startIndv |> Option.defaultValue {Genome=randomGenome cspec; Loss=System.Double.MaxValue}
-
-    let rec loop i hist parent =
-      if not(List.isEmpty hist) && terminator i hist then 
-        match verbosity with Verbose -> printfn "done in gen %d" i | _ -> ()
-      else
-        let parent' = runGen cspec parent lambda evaluator test_cases
-        if parent'.Loss < parent.Loss then
-          match verbosity with Verbose -> printfn "new best %.10f" parent'.Loss | _ -> ()
-          postNewBest parent'
-        loop (i+1) ((parent'.Loss::hist) |> List.truncate 5) parent'
-
-    loop 1 [] parent
+    runMuPlusLambda verbosity cspec 1 lambda evaluator test_cases terminator postNewBest startIndv
 
   ///see run1PlusLambda for details
   ///dynamic version where the environment (test_cases) can change
@@ -218,8 +199,8 @@ module CgpRun =
     let current = ref [||]
     let _  = 
         testStream.Subscribe(fun test_cases ->
-            current := test_cases
-            change := true
+            current.Value <- test_cases
+            change.Value <- true
             match verbosity with Verbose -> printfn "test cases changed"  | _ -> ()
             )
 
@@ -228,14 +209,14 @@ module CgpRun =
         match verbosity with Verbose -> printfn "done in gen %d" i | _ -> ()
       else
         let parent =
-            if !change then
+            if change.Value then
                 let p = copyIndv parent
-                p.Loss <- evaluator !current parent.Genome //update parent loss if test cases changed
-                change := false
+                p.Loss <- evaluator current.Value parent.Genome //update parent loss if test cases changed
+                change.Value <- false
                 p
             else
                 parent
-        let parent' = runGen cspec parent lambda evaluator !current
+        let parent' = runGenMu cspec [parent] 1 lambda evaluator current.Value |> List.head
         if parent'.Loss < parent.Loss then
           match verbosity with Verbose -> printfn "new best %.10f" parent'.Loss | _ -> ()
           postNewBest parent'

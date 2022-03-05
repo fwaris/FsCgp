@@ -71,10 +71,10 @@ module Probability =
         match spare.Value.Value with
         | None -> 
             let polar,v1,v2 = gaussian()
-            spare.Value := Some (polar,v2)
+            spare.Value.Value <- Some (polar,v2)
             v1*polar
         | Some(polar,v2) -> 
-            spare.Value := None
+            spare.Value.Value <- None
             v2*polar
 
     //thread-safe gaussian sampler
@@ -82,10 +82,10 @@ module Probability =
         match spare.Value.Value with
         | None -> 
             let polar,v1,v2 = gaussian()
-            spare.Value := Some (polar,v2)
+            spare.Value.Value <- Some (polar,v2)
             v1*polar*sigma + mean
         | Some(polar,v2) -> 
-            spare.Value := None
+            spare.Value.Value <- None
             v2*polar*sigma + mean
 
     let createWheel (weights:('a*float)[]) = //key * weight  key must be unique

@@ -8,7 +8,7 @@ module Observable =
         let subscribers = ref (Map.empty : Map<int, IObserver<'T>>)
 
         let inline publish msg = 
-            !subscribers 
+            subscribers.Value 
             |> Seq.iter (fun (KeyValue(_, sub)) ->
                 try
                         sub.OnNext(msg)
@@ -17,9 +17,9 @@ module Observable =
 
         let completed() = 
             lock subscribers (fun () ->
-            finished := true
-            !subscribers |> Seq.iter (fun (KeyValue(_, sub)) -> sub.OnCompleted())
-            subscribers := Map.empty)
+            finished.Value <- true
+            subscribers.Value |> Seq.iter (fun (KeyValue(_, sub)) -> sub.OnCompleted())
+            subscribers.Value <- Map.empty)
 
         token.Register(fun () -> completed()) |> ignore //callback for when token is cancelled
             
@@ -38,15 +38,15 @@ module Observable =
                 member this.Subscribe(obs) =
                     let key1 =
                         lock subscribers (fun () ->
-                            if !finished then failwith "Observable has already completed"
-                            let key1 = !count
-                            count := !count + 1
-                            subscribers := subscribers.Value.Add(key1, obs)
+                            if finished.Value then failwith "Observable has already completed"
+                            let key1 = count.Value
+                            count.Value <- count.Value + 1
+                            subscribers.Value <- subscribers.Value.Add(key1, obs)
                             key1)
                     { new IDisposable with  
                         member this.Dispose() = 
                             lock subscribers (fun () -> 
-                                subscribers := subscribers.Value.Remove(key1)) } }
+                                subscribers.Value <- subscribers.Value.Remove(key1)) } }
         let fPost = 
             backpressureAtDepth 
             |> Option.map (fun depth ->

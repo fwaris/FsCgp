@@ -6,10 +6,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="scripts\SetEnv.fsx" />
     <None Include="scripts\BaseTest.fsx" />
     <None Include="scripts\TestSerialization.fsx" />
     <None Include="scripts\TestPrint.fsx" />
-    <None Include="scripts\SetEnv.fsx" />
     <None Include="scripts\PolynomialDynamic.fsx" />
     <None Include="scripts\Polynomial.fsx" />
     <None Include="scripts\CgpArt.fsx" />
@@ -20,6 +20,8 @@
     <ProjectReference Include="..\FsCgp\FsCgp.fsproj" />
   </ItemGroup>
 
-  <ItemGroup />
+  <ItemGroup>
+    <PackageReference Update="FSharp.Core" Version="6.0.3" />
+  </ItemGroup>
 
 </Project>

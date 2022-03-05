@@ -3,7 +3,7 @@
 open FsCgp
 open FsCgp.CgpBase
 open FsCgp.CgpRun
-open FsCgp.CgpGraph
+//open FsCgp.CgpGraph
 
 
 //example taken from
@@ -48,26 +48,26 @@ let test_cases =
 let loss (y':float[]) (y:float[]) = (y'.[0] - y.[0]) ** 2.0 //square loss y' is output from the genome evaluation and y is actual output 
 
 let cspec = compile spec
-let cacheSpec = {Cache=createCache 1; Cspec=cspec; ConstGen=floatCache }
 //let evaluator = createEvaluator cspec loss Basic (Cached cacheSpec)
 //let evaluator = createEvaluator cspec loss Parallel (Cached cacheSpec)
-let evaluator = createEvaluator cspec loss Parallel (Dropout (0.1, 10))
+let evaluator = createEvaluator cspec loss Parallel Default// (Dropout (0.1, 10))
 
-let termination gen loss = List.head loss < 0.000001 //|| gen > 100000
+let termination gen loss =
+    List.head loss < 0.000001 //|| gen > 100000
 
 let currentBest = ref Unchecked.defaultof<_>
 
 let runAsync() =
   async {
-    do run1PlusLambda Verbose cspec 10  evaluator test_cases termination (fun indv -> currentBest := indv) None
+    do runMuPlusLambda Verbose cspec 5 10 evaluator test_cases termination (fun indv -> currentBest.Value <- indv) None
   }
-  |> Async.Start
+  //|> Async.Start
 
-let showBest() = callGraph cspec currentBest.Value.Genome |> visualize
+let showBest() = callGraph cspec currentBest.Value.Genome ///|> visualize
   
 (*
+runAsync()  |> Async.RunSynchronously //run this to find the best genome
 
-runAsync()  //run this to find the best genome
 
 showBest()  //run this periodically to view the graph of the current best genome
 

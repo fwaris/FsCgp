@@ -1,7 +1,7 @@
 ﻿namespace FsCgp
 //Please read this for background
 //Chapter 2. Cartesian Genetic Programming. Julian F. Miller.  
-//https://www.springer.com/cda/content/document/cda_downloaddocument/9783642173097-c2.pdf
+//https://www.researchgate.net/publication/2859242_Cartesian_Genetic_Programming
 
 ///entry of the function table
 type Func<'a> =
@@ -195,7 +195,7 @@ module CgpBase =
 
     //return the evaluator function
     fun realInputs ->
-      inputs := realInputs
+      inputs.Value <- realInputs
       fcalls |> List.iter (fun (foOffset,f) -> 
         let funcOutputs = functionOutputs.[foOffset]
         f funcOutputs

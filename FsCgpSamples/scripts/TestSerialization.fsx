@@ -1,9 +1,9 @@
 ﻿#load "SetEnv.fsx"
-#load "..\CgpSer.fs"
+#load @"..\..\FsCgp\CgpSer.fs"
 
 open FsCgp
 open FsCgp.CgpBase
-open FsCgp.CgpGraph
+//open FsCgp.CgpGraph
 open FsCgp
 
 //example taken from
@@ -48,11 +48,11 @@ let cspec = compile spec
 
 let cg = callGraph cspec genome
 
-visualize cg
+//visualize cg
 
-CgpSer.saveGenomeTo "genome1.xml" genome //goes to <user>\AppData\Local\Temp
+//CgpSer.saveGenomeTo "genome1.xml" genome //goes to <user>\AppData\Local\Temp
 
-let g2:Genome<float> = CgpSer.loadGenomeFrom "genome1.xml"
+//let g2:Genome<float> = CgpSer.loadGenomeFrom "genome1.xml"
 
-let cg2 = callGraph cspec g2
-visualize cg2
+//let cg2 = callGraph cspec g2
+//visualize cg2

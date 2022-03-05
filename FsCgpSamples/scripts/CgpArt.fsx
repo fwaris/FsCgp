@@ -1,4 +1,11 @@
 ﻿#load "SetEnv.fsx"
+//can't do visualization in .netcore and fsi yet - use standard framework in F# options
+#r "System.Windows.Forms"
+#r "Sytem.Drawing"
+#load "GgpGraph.fs"
+
+
+// does not work in .net core and fsi
 
 open FsCgp.CgpGraph
 open FsCgp

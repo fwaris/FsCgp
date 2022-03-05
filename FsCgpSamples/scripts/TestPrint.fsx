@@ -1,7 +1,7 @@
 ﻿#load "SetEnv.fsx"
 open FsCgp
 open FsCgp.CgpBase
-open FsCgp.CgpGraph
+//open FsCgp.CgpGraph
 
 
 //example taken from
@@ -45,7 +45,7 @@ let cspec = compile spec
 
 let cg = callGraph cspec genome
 
-visualizeWithLabels [|"input label"|] cg 
+//visualizeWithLabels [|"input label"|] cg 
 
 
 
