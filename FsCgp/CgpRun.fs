@@ -134,8 +134,9 @@ module CgpRun =
   ///traditional mu + lambda 
   let runGenMu cspec parents mu lambda (evaluator:Evaluator<_>) (test_cases:TestCases<_>) =
     let explrtryPop = genPop cspec 2 //exploratory genomes
-    let children = (parents |> List.collect (fun p -> [for i in 1 .. lambda -> copyIndv p])) @ explrtryPop |> List.toArray
-    Array.Parallel.iter(fun p -> p.Loss <- evaluator test_cases p.Genome) children
+    let children = (parents |> List.collect (fun p -> [for i in 1 .. lambda -> copyIndv p])) 
+    children |> List.iter (fun p -> mutate cspec p.Genome) 
+    Array.Parallel.iter(fun p -> p.Loss <- evaluator test_cases p.Genome) (List.toArray children)
     let orderedIndvs = Seq.append parents children |> Seq.sortBy (fun i -> i.Loss)
     orderedIndvs |> Seq.truncate mu |> Seq.toList
         

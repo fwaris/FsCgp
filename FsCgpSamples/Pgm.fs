@@ -59,7 +59,7 @@ let currentBest = ref Unchecked.defaultof<_>
 
 let runAsync() =
   async {
-    do runMuPlusLambda Verbose cspec 5 10 evaluator test_cases termination (fun indv -> currentBest.Value <- indv) None
+    do runMuPlusLambda Verbose cspec 10 5 evaluator test_cases termination (fun indv -> currentBest.Value <- indv) None
   }
   //|> Async.Start
 
