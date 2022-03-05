@@ -136,7 +136,7 @@ module CgpRun =
     let explrtryPop = genPop cspec 2 //exploratory genomes
     let children = (parents |> List.collect (fun p -> [for i in 1 .. lambda -> copyIndv p])) 
     children |> List.iter (fun p -> mutate cspec p.Genome) 
-    Array.Parallel.iter(fun p -> p.Loss <- evaluator test_cases p.Genome) (List.toArray children)
+    Array.iter(fun p -> p.Loss <- evaluator test_cases p.Genome) (List.toArray (children @ explrtryPop))
     let orderedIndvs = Seq.append parents children |> Seq.sortBy (fun i -> i.Loss)
     orderedIndvs |> Seq.truncate mu |> Seq.toList
         

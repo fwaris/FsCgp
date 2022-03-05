@@ -52,6 +52,14 @@ module Probability =
             new XorshiftPRNG(seed)))
         localGenerator
 
+    //type SafeRNG = ThreadLocal<Random>
+
+    //let RNG:SafeRNG =
+    //    // Create master seed generator and thread local value
+    //    let seedGenerator = new Random()
+    //    let localGenerator = new ThreadLocal<Random>(fun _ -> new Random())
+    //    localGenerator
+
     //Marsaglia polar method
     let private gaussian() = 
         let mutable v1 = 0.
