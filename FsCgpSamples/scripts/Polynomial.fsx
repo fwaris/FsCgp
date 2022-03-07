@@ -57,16 +57,16 @@ let currentBest = ref Unchecked.defaultof<_>
 
 let runAsync() =
   async {
-    //do runMuPlusLambda Verbose cspec 5 10 evaluator test_cases termination Default true (fun indv -> currentBest.Value <- indv) None
+    do runMuPlusLambda Verbose cspec 5 10 evaluator test_cases termination Default true (fun indv -> currentBest.Value <- indv) None                //speciation runs better
     //do runMuPlusLambda Verbose cspec 5 10 evaluator test_cases termination Default false (fun indv -> currentBest.Value <- indv) None
-    do runMuPlusLambda Verbose cspec 5 10 evaluator test_cases termination (Dropout(0.1,1000)) true (fun indv -> currentBest.Value <- indv) None
+    //do runMuPlusLambda Verbose cspec 5 10 evaluator test_cases termination (Dropout(0.1,1000)) true (fun indv -> currentBest.Value <- indv) None
   }
   //|> Async.Start
 
 let showBest() = callGraph cspec currentBest.Value.Genome ///|> visualize
   
 (*
-runAsync()  |> Async.RunSynchronously //run this to find the best genome
+runAsync()  |> Async.Start //run this to find the best genome
 
 
 showBest()  //run this periodically to view the graph of the current best genome

@@ -66,6 +66,7 @@ module CgpRun =
               |> Array.sum
             if System.Double.IsNaN fit then System.Double.MaxValue else fit
 
+  ///create threadsafe version of evaluator for parallelization
   let createEvaluator<'a> cspec loss : (('a[]*'a[])[] -> Genome<'a>->float) = 
     Evaluation.defaultEvaluatorPar<'a> cspec loss 
 
@@ -98,7 +99,12 @@ module CgpRun =
     children |> PSeq.iter (fun p -> mutate cspec p.Genome) 
     let children = children @ explrtryPop
     children |> PSeq.iter (fun c -> c.Loss <- evaluator test_cases c.Genome)
-    let orderedIndvs = Seq.append parents children |> Seq.sortBy (fun i -> i.Loss)
+    let orderedIndvs = 
+        Seq.append 
+            (parents |> Seq.map (fun p -> p,1))               //parents with priority
+            (children |> Seq.map (fun c -> c,0))              //children with higher priority
+        |> Seq.sortBy (fun (i,priority) -> i.Loss,priority)   //select children before parents if the loss is the same
+        |> Seq.map fst
     orderedIndvs |> Seq.truncate mu |> Seq.toList
         
   ///mu parents + lambda mutated individuals method
