@@ -1,5 +1,6 @@
 ﻿#r "nuget: FsPickler, Version=5.3.2"
 #r "nuget: AutomaticGraphLayout.GraphViewerGDI"
+#r "nuget: FSharp.Collections.ParallelSeq"
 //#r "nuget: System.Configuration.ConfigurationManager, Version=6.0.0"
 //#r "nuget: System.Runtime.Caching, Version=6.0.0"
 //System.Reflection.Assembly.Load("System.Configuration.ConfigurationManager")

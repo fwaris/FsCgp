@@ -50,11 +50,7 @@ let loss (y':float[]) (y:float[]) = (y'.[0] - y.[0]) ** 2.0 //square loss y' is 
 
 let cspec = compile spec
 
-//********** cannot use caching with dynamic ***** 
-//let cacheSpec = {Cache=createCache 1; Cspec=cspec; ConstGen=floatCache }
-//let evaluator = createEvaluator cspec loss Basic (Cached cacheSpec)
-//let evaluator = createEvaluator cspec loss Parallel (Cached cacheSpec)
-let evaluator = createEvaluator cspec loss Parallel Default
+let evaluator = createEvaluator cspec loss
 
 let termination gen loss = gen > 100000
 
@@ -67,7 +63,7 @@ let runAsync() =
   async {
     do run1PlusLambdaDynamic 
         Verbose cspec 10  evaluator obsTestCases 
-        termination (fun indv -> currentBest := indv) None
+        termination (fun indv -> currentBest.Value <- indv) None
   }
   |> Async.Start
 

@@ -48,9 +48,7 @@ let test_cases =
 let loss (y':float[]) (y:float[]) = (y'.[0] - y.[0]) ** 2.0 //square loss y' is output from the genome evaluation and y is actual output 
 
 let cspec = compile spec
-//let evaluator = createEvaluator cspec loss Basic (Cached cacheSpec)
-//let evaluator = createEvaluator cspec loss Parallel (Cached cacheSpec)
-let evaluator = createEvaluator cspec loss Parallel Default// (Dropout (0.1, 10))
+let evaluator = createEvaluator cspec loss
 
 let termination gen loss =
     List.head loss < 0.000001 //|| gen > 100000
@@ -59,7 +57,9 @@ let currentBest = ref Unchecked.defaultof<_>
 
 let runAsync() =
   async {
-    do runMuPlusLambda Verbose cspec 5 10 evaluator test_cases termination (fun indv -> currentBest.Value <- indv) None
+    //do runMuPlusLambda Verbose cspec 5 10 evaluator test_cases termination Default true (fun indv -> currentBest.Value <- indv) None
+    //do runMuPlusLambda Verbose cspec 5 10 evaluator test_cases termination Default false (fun indv -> currentBest.Value <- indv) None
+    do runMuPlusLambda Verbose cspec 5 10 evaluator test_cases termination (Dropout(0.1,1000)) true (fun indv -> currentBest.Value <- indv) None
   }
   //|> Async.Start
 

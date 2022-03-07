@@ -1,11 +1,11 @@
 ﻿namespace FsCgp
 open CgpBase
 open System
+open FSharp.Collections.ParallelSeq
 
 type Indv<'a> = {Genome:Genome<'a>; mutable Loss : float} //fitter individual has lower loss
 type TestCases<'a> = ('a[]*'a[])[]
 type Evaluator<'a> = TestCases<'a>->Genome<'a>->float
-type Evalconcurrency = Parallel | Basic
 type Verbosity = Silent | Verbose
 
 type EvaluatorSpec<'a> = 
@@ -46,22 +46,8 @@ module CgpRun =
 
   let copyIndv i = {i with Genome=copyGenome i.Genome; Loss=i.Loss}
 
-  module private  Evaluation =
-
-      ///a basic evaluator 
-      ///where the test_cases are a seq of tuples of (input vector, output vector)
-      ///loss_func takes genome output and actual ouput and returns calculated loss
-      let defaultEvaluator<'a> cspec (loss_func:'a[]->'a[]->float) =
-        fun test_cases genome ->
-            let ev = evaluator cspec genome
-            let fit =
-              test_cases
-              |> Seq.averageBy(fun (x,y) -> 
-                let y' = ev x
-                let caseLoss = loss_func y y'
-                caseLoss)
-            if System.Double.IsNaN fit then System.Double.MaxValue else fit
-
+  module private Evaluation =
+      
       ///Wrapper type for parallel evaluation
       type PEvalulator<'a>(cspec:CompiledSpec<'a>, genome) =
         let ev =  evaluator cspec genome
@@ -80,63 +66,38 @@ module CgpRun =
               |> Array.sum
             if System.Double.IsNaN fit then System.Double.MaxValue else fit
 
-
-      ///generate key for caching
-      ///two functionally equivalent genomes should generate the same key
-      let genKey constKeyGen cspec genome =
-        let mask = genomeMask cspec genome
-        let activeNodes = Seq.zip mask genome.G |> Seq.map(fun (b,n) -> (if b then string n else "-" ) |> box)
-        let consts = genome.Constants |> Seq.map (fun c-> (constKeyGen c) :> obj)
-        let parms = Seq.append activeNodes consts
-        let k = String.Join("_",Seq.toArray parms)
-        k
-
-      let dropoutEvaluator<'a> (baseEvaluator:Evaluator<'a>) dropPct resampleAfter =
-        let sample = ref [||]
-        let count = ref 0                 //resampling  at every evalution is unstable (resampleAter should be twice the population size)
-        fun test_cases genome ->
-            if count.Value = 0 then
-                sample.Value <- test_cases |> Probability.Seq.sample (1.0 - dropPct) |> Seq.toArray
-            count.Value <- count.Value + 1
-            if count.Value > resampleAfter then count.Value <- 0
-            baseEvaluator test_cases genome
-
-  let createEvaluator<'a> cspec loss evalConcurrency evalSpec : (('a[]*'a[])[] -> Genome<'a>->float) = 
-    let baseEvaluator = 
-        match evalConcurrency with 
-        | Parallel -> Evaluation.defaultEvaluatorPar<'a> cspec loss 
-        | Basic -> Evaluation.defaultEvaluator<'a> cspec loss
-    match evalSpec with
-    | Default -> baseEvaluator 
-    | Dropout (d,c) -> Evaluation.dropoutEvaluator<'a> baseEvaluator d c
+  let createEvaluator<'a> cspec loss : (('a[]*'a[])[] -> Genome<'a>->float) = 
+    Evaluation.defaultEvaluatorPar<'a> cspec loss 
 
   let runParent cspec lambda (evaluator:Evaluator<_>) (test_cases:TestCases<_>) parent =
     let children = 
-        [for i in 1 .. lambda do 
+        [1 .. lambda]
+        |> PSeq.map(fun _ -> 
             let child = copyIndv parent
             mutate cspec child.Genome
             child.Loss <- evaluator test_cases child.Genome
-            yield child
-        ]
+            child)
+        |> PSeq.toList
     let bestChild = children |> List.minBy (fun x->x.Loss)
-    let parent' = if bestChild.Loss < parent.Loss then bestChild else parent
+    let parent' = if bestChild.Loss <= parent.Loss then bestChild else parent
     parent'
         
   ///'speciated' mu plus lambda - seems to perform better
   let runGenMuSpeciated cspec parents mu lambda (evaluator:Evaluator<_>) (test_cases:TestCases<_>) =
     let explrtryPop = genPop cspec 2 //exploratory genomes
-    explrtryPop |> List.iter (fun i -> i.Loss<-evaluator test_cases i.Genome)
+    explrtryPop |> PSeq.iter (fun i -> i.Loss<-evaluator test_cases i.Genome)
     let bestExpIndv = explrtryPop |> List.minBy (fun i->i.Loss)
-    let children = parents |> List.map (runParent cspec lambda evaluator test_cases)
+    let children = parents |> PSeq.map (runParent cspec lambda evaluator test_cases) |> PSeq.toList
     let orderedIndvs = children @ [bestExpIndv] |> List.sortBy (fun i -> i.Loss)
     orderedIndvs |> List.truncate mu
 
   ///traditional mu + lambda 
   let runGenMu cspec parents mu lambda (evaluator:Evaluator<_>) (test_cases:TestCases<_>) =
     let explrtryPop = genPop cspec 2 //exploratory genomes
-    let children = (parents |> List.collect (fun p -> [for i in 1 .. lambda -> copyIndv p])) 
-    children |> List.iter (fun p -> mutate cspec p.Genome) 
-    Array.iter(fun p -> p.Loss <- evaluator test_cases p.Genome) (List.toArray (children @ explrtryPop))
+    let children = (parents |> PSeq.collect (fun p -> [for i in 1 .. lambda -> copyIndv p])) |> PSeq.toList
+    children |> PSeq.iter (fun p -> mutate cspec p.Genome) 
+    let children = children @ explrtryPop
+    children |> PSeq.iter (fun c -> c.Loss <- evaluator test_cases c.Genome)
     let orderedIndvs = Seq.append parents children |> Seq.sortBy (fun i -> i.Loss)
     orderedIndvs |> Seq.truncate mu |> Seq.toList
         
@@ -151,6 +112,9 @@ module CgpRun =
     (evaluator:Evaluator<_>)
     (test_cases:TestCases<_>)
     (terminator:Terminator) 
+    (evalMode:EvaluatorSpec<_>) 
+    ///if true, evolves each parent separately to maintain diversity
+    (speciated:bool)
     ///callback to get new best individual when found
     postNewBest 
     startIndv =
@@ -159,38 +123,32 @@ module CgpRun =
         |> Option.map(fun i -> genPop cspec (mu-1) @ [i])
         |> Option.defaultValue (genPop cspec mu)
 
-    let rec loop i hist parents =
+    let rec loop i hist sample (parents:Indv<'a> list) =
         if not(List.isEmpty hist) && terminator i hist then 
             match verbosity with Verbose -> printfn "done in gen %d" i | _ -> ()
         else
-            let parents' = runGenMuSpeciated cspec parents mu lambda evaluator test_cases
+            let parents' = 
+                if speciated then 
+                    runGenMuSpeciated cspec parents mu lambda evaluator test_cases
+                else
+                    runGenMu cspec parents mu lambda evaluator test_cases
             if parents'.[0].Loss < parents.[0].Loss then
                 match verbosity with Verbose -> printfn "new best %.10f" parents'.[0].Loss | _ -> ()
                 postNewBest parents'.[0]
             let hist' = ((parents' |> List.map (fun x->x.Loss)) @ hist) |> List.truncate 5
-            loop (i+1) hist' parents'
-    loop 1 [] parents
+            let sample =
+                match evalMode with
+                | Dropout(d,c) -> if i%c = 0 then 
+                                        if verbosity = Verbosity.Verbose then
+                                            printfn $"resampled test cases at gen {i}"
+                                        Probability.Seq.sample (1.0 - d) test_cases |> Seq.toArray 
+                                  else 
+                                    sample
+                | Default      -> sample
+            loop (i+1) hist' sample parents'
+    loop 1 [] test_cases parents
 
-  ///one parent + lambda random individuals method
-  ///each generation, the best individual is picked as parent
-  ///only parent is mutated the rest are randomly generated
-  ///currentBest is updated as new best indvidual is found
-  //this could be a long running process so intermediate bests are useful for 
-  //visualization and saving
-  let run1PlusLambda 
-    verbosity 
-    cspec
-    lambda
-    (evaluator:Evaluator<_>)
-    (test_cases:TestCases<_>)
-    (terminator:Terminator) 
-    ///callback to get new best individual when found
-    postNewBest 
-    startIndv
-    =
-    runMuPlusLambda verbosity cspec 1 lambda evaluator test_cases terminator postNewBest startIndv
 
-  ///see run1PlusLambda for details
   ///dynamic version where the environment (test_cases) can change
   ///at any time invalidating existing losses
   let inline run1PlusLambdaDynamic 
@@ -225,7 +183,7 @@ module CgpRun =
                 p
             else
                 parent
-        let parent' = runGenMuSpeciated cspec [parent] 1 lambda evaluator current.Value |> List.head
+        let parent' = runGenMu cspec [parent] 1 lambda evaluator current.Value |> List.head                
         if parent'.Loss < parent.Loss then
           match verbosity with Verbose -> printfn "new best %.10f" parent'.Loss | _ -> ()
           postNewBest parent'
